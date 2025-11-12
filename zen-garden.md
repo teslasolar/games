@@ -1,0 +1,461 @@
+# Zen Garden
+
+Relaxing 3D zen garden builder with sand raking, rocks, and ambient sounds.
+
+```html
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Zen Garden</title>
+    <style>
+        body {
+            margin: 0;
+            overflow: hidden;
+            font-family: 'Courier New', monospace;
+            background: linear-gradient(135deg, #2c3e50, #34495e);
+        }
+        #info {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            color: #d4af37;
+            background: rgba(0, 0, 0, 0.7);
+            padding: 20px;
+            border: 2px solid #d4af37;
+            border-radius: 10px;
+            font-size: 14px;
+            z-index: 100;
+        }
+        #tools {
+            position: absolute;
+            bottom: 10px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            gap: 10px;
+            z-index: 100;
+        }
+        .tool-btn {
+            padding: 15px 25px;
+            background: rgba(212, 175, 55, 0.2);
+            border: 2px solid #d4af37;
+            color: #d4af37;
+            border-radius: 10px;
+            cursor: pointer;
+            font-family: 'Courier New', monospace;
+            font-size: 14px;
+            transition: all 0.3s;
+        }
+        .tool-btn:hover {
+            background: rgba(212, 175, 55, 0.4);
+            transform: translateY(-2px);
+        }
+        .tool-btn.active {
+            background: rgba(212, 175, 55, 0.6);
+            border-width: 3px;
+        }
+        .hint {
+            font-size: 11px;
+            color: #c9b068;
+            margin-top: 5px;
+        }
+    </style>
+</head>
+<body>
+    <div id="info">
+        <div style="font-size: 20px; margin-bottom: 15px;">🏯 ZEN GARDEN</div>
+        <div class="hint">Left Click: Place/Rake</div>
+        <div class="hint">Right Click: Remove</div>
+        <div class="hint">Mouse Drag: Rotate View</div>
+        <div class="hint">Scroll: Zoom</div>
+        <div class="hint">R: Reset Sand</div>
+    </div>
+
+    <div id="tools">
+        <button class="tool-btn active" data-tool="rake">🌾 Rake Sand</button>
+        <button class="tool-btn" data-tool="rock">🪨 Place Rock</button>
+        <button class="tool-btn" data-tool="plant">🌿 Add Plant</button>
+        <button class="tool-btn" data-tool="lantern">🏮 Place Lantern</button>
+        <button class="tool-btn" data-tool="water">💧 Add Water</button>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script>
+        // Scene setup
+        const scene = new THREE.Scene();
+        scene.background = new THREE.Color(0x87ceeb);
+        scene.fog = new THREE.Fog(0x87ceeb, 50, 200);
+
+        const camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 1000);
+        camera.position.set(15, 15, 15);
+        camera.lookAt(0, 0, 0);
+
+        const renderer = new THREE.WebGLRenderer({ antialias: true });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.shadowMap.enabled = true;
+        renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+        document.body.appendChild(renderer.domElement);
+
+        // Lighting
+        const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
+        scene.add(ambientLight);
+
+        const sunLight = new THREE.DirectionalLight(0xffeedd, 0.8);
+        sunLight.position.set(20, 30, 10);
+        sunLight.castShadow = true;
+        sunLight.shadow.camera.left = -30;
+        sunLight.shadow.camera.right = 30;
+        sunLight.shadow.camera.top = 30;
+        sunLight.shadow.camera.bottom = -30;
+        sunLight.shadow.mapSize.width = 2048;
+        sunLight.shadow.mapSize.height = 2048;
+        scene.add(sunLight);
+
+        // Garden base
+        const gardenSize = 20;
+        const sandResolution = 50;
+
+        // Create sand with height map
+        const sandGeometry = new THREE.PlaneGeometry(gardenSize, gardenSize, sandResolution, sandResolution);
+        const sandMaterial = new THREE.MeshPhongMaterial({
+            color: 0xf4e7d7,
+            flatShading: false,
+            side: THREE.DoubleSide
+        });
+
+        const sand = new THREE.Mesh(sandGeometry, sandMaterial);
+        sand.rotation.x = -Math.PI / 2;
+        sand.receiveShadow = true;
+        scene.add(sand);
+
+        // Store original vertices
+        const positions = sand.geometry.attributes.position.array;
+        const originalPositions = Float32Array.from(positions);
+
+        // Border
+        const borderGeometry = new THREE.BoxGeometry(gardenSize + 1, 0.5, 1);
+        const borderMaterial = new THREE.MeshPhongMaterial({ color: 0x8b4513 });
+
+        const borders = [
+            { pos: [0, 0.25, -gardenSize / 2 - 0.5], rot: [0, 0, 0] },
+            { pos: [0, 0.25, gardenSize / 2 + 0.5], rot: [0, 0, 0] },
+        ];
+
+        const borderGeometry2 = new THREE.BoxGeometry(1, 0.5, gardenSize + 2);
+        borders.push(
+            { pos: [-gardenSize / 2 - 0.5, 0.25, 0], rot: [0, 0, 0], geo: borderGeometry2 },
+            { pos: [gardenSize / 2 + 0.5, 0.25, 0], rot: [0, 0, 0], geo: borderGeometry2 }
+        );
+
+        borders.forEach(b => {
+            const border = new THREE.Mesh(b.geo || borderGeometry, borderMaterial);
+            border.position.set(...b.pos);
+            border.castShadow = true;
+            border.receiveShadow = true;
+            scene.add(border);
+        });
+
+        // Game state
+        const gameState = {
+            currentTool: 'rake',
+            objects: []
+        };
+
+        // Objects in the garden
+        class GardenObject {
+            constructor(type, position) {
+                this.type = type;
+                this.mesh = null;
+
+                if (type === 'rock') {
+                    const size = 0.5 + Math.random() * 1;
+                    const geometry = new THREE.DodecahedronGeometry(size);
+                    const material = new THREE.MeshPhongMaterial({ color: 0x808080 });
+                    this.mesh = new THREE.Mesh(geometry, material);
+                    this.mesh.position.copy(position);
+                    this.mesh.position.y = size * 0.3;
+                    this.mesh.rotation.set(
+                        Math.random() * Math.PI,
+                        Math.random() * Math.PI,
+                        Math.random() * Math.PI
+                    );
+                } else if (type === 'plant') {
+                    const group = new THREE.Group();
+
+                    // Stem
+                    const stemGeo = new THREE.CylinderGeometry(0.05, 0.08, 1.5, 8);
+                    const stemMat = new THREE.MeshPhongMaterial({ color: 0x2d5016 });
+                    const stem = new THREE.Mesh(stemGeo, stemMat);
+                    stem.position.y = 0.75;
+                    group.add(stem);
+
+                    // Leaves
+                    for (let i = 0; i < 5; i++) {
+                        const leafGeo = new THREE.SphereGeometry(0.3, 8, 8);
+                        const leafMat = new THREE.MeshPhongMaterial({ color: 0x228b22 });
+                        const leaf = new THREE.Mesh(leafGeo, leafMat);
+                        const angle = (i / 5) * Math.PI * 2;
+                        leaf.position.set(
+                            Math.cos(angle) * 0.3,
+                            1.5 + Math.sin(i) * 0.2,
+                            Math.sin(angle) * 0.3
+                        );
+                        leaf.scale.set(0.7, 1, 0.5);
+                        group.add(leaf);
+                    }
+
+                    this.mesh = group;
+                    this.mesh.position.copy(position);
+                } else if (type === 'lantern') {
+                    const group = new THREE.Group();
+
+                    // Post
+                    const postGeo = new THREE.CylinderGeometry(0.1, 0.1, 3, 8);
+                    const postMat = new THREE.MeshPhongMaterial({ color: 0x654321 });
+                    const post = new THREE.Mesh(postGeo, postMat);
+                    post.position.y = 1.5;
+                    group.add(post);
+
+                    // Lantern
+                    const lanternGeo = new THREE.CylinderGeometry(0.4, 0.4, 0.8, 6);
+                    const lanternMat = new THREE.MeshPhongMaterial({
+                        color: 0xff6600,
+                        emissive: 0xff6600,
+                        emissiveIntensity: 0.5
+                    });
+                    const lantern = new THREE.Mesh(lanternGeo, lanternMat);
+                    lantern.position.y = 3;
+                    group.add(lantern);
+
+                    // Light
+                    const light = new THREE.PointLight(0xff6600, 1, 10);
+                    light.position.y = 3;
+                    group.add(light);
+
+                    this.mesh = group;
+                    this.mesh.position.copy(position);
+                } else if (type === 'water') {
+                    const geometry = new THREE.CircleGeometry(1.5, 32);
+                    const material = new THREE.MeshPhongMaterial({
+                        color: 0x4dabf7,
+                        transparent: true,
+                        opacity: 0.7,
+                        side: THREE.DoubleSide
+                    });
+                    this.mesh = new THREE.Mesh(geometry, material);
+                    this.mesh.rotation.x = -Math.PI / 2;
+                    this.mesh.position.copy(position);
+                    this.mesh.position.y = 0.05;
+                }
+
+                if (this.mesh) {
+                    this.mesh.castShadow = true;
+                    this.mesh.receiveShadow = true;
+                    scene.add(this.mesh);
+                }
+            }
+
+            remove() {
+                if (this.mesh) {
+                    scene.remove(this.mesh);
+                }
+            }
+        }
+
+        // Rake sand
+        function rakeSand(x, z, radius = 1) {
+            const positions = sand.geometry.attributes.position.array;
+            const sandSize = gardenSize;
+            const res = sandResolution;
+
+            for (let i = 0; i < positions.length; i += 3) {
+                const vx = positions[i];
+                const vz = positions[i + 1];
+
+                const dist = Math.sqrt((vx - x) ** 2 + (vz - z) ** 2);
+
+                if (dist < radius) {
+                    const influence = (1 - dist / radius) * 0.3;
+                    const pattern = Math.sin(vx * 3) * 0.15;
+                    positions[i + 2] = pattern * influence;
+                }
+            }
+
+            sand.geometry.attributes.position.needsUpdate = true;
+            sand.geometry.computeVertexNormals();
+        }
+
+        // Reset sand
+        function resetSand() {
+            const positions = sand.geometry.attributes.position.array;
+            for (let i = 0; i < positions.length; i++) {
+                positions[i] = originalPositions[i];
+            }
+            sand.geometry.attributes.position.needsUpdate = true;
+            sand.geometry.computeVertexNormals();
+        }
+
+        // Mouse interaction
+        const raycaster = new THREE.Raycaster();
+        const mouse = new THREE.Vector2();
+        let isMouseDown = false;
+        let lastRakePos = null;
+
+        renderer.domElement.addEventListener('mousedown', (e) => {
+            isMouseDown = true;
+
+            mouse.x = (e.clientX / window.innerWidth) * 2 - 1;
+            mouse.y = -(e.clientY / window.innerHeight) * 2 + 1;
+
+            raycaster.setFromCamera(mouse, camera);
+            const intersects = raycaster.intersectObject(sand);
+
+            if (intersects.length > 0) {
+                const point = intersects[0].point;
+
+                if (e.button === 0) { // Left click
+                    if (gameState.currentTool === 'rake') {
+                        rakeSand(point.x, point.z);
+                        lastRakePos = { x: point.x, z: point.z };
+                    } else {
+                        const obj = new GardenObject(gameState.currentTool, point);
+                        gameState.objects.push(obj);
+                    }
+                } else if (e.button === 2) { // Right click
+                    // Remove nearest object
+                    let nearest = null;
+                    let minDist = Infinity;
+
+                    gameState.objects.forEach(obj => {
+                        const dist = point.distanceTo(obj.mesh.position);
+                        if (dist < minDist && dist < 2) {
+                            minDist = dist;
+                            nearest = obj;
+                        }
+                    });
+
+                    if (nearest) {
+                        nearest.remove();
+                        const idx = gameState.objects.indexOf(nearest);
+                        gameState.objects.splice(idx, 1);
+                    }
+                }
+            }
+        });
+
+        renderer.domElement.addEventListener('mousemove', (e) => {
+            if (isMouseDown && gameState.currentTool === 'rake') {
+                mouse.x = (e.clientX / window.innerWidth) * 2 - 1;
+                mouse.y = -(e.clientY / window.innerHeight) * 2 + 1;
+
+                raycaster.setFromCamera(mouse, camera);
+                const intersects = raycaster.intersectObject(sand);
+
+                if (intersects.length > 0) {
+                    const point = intersects[0].point;
+                    rakeSand(point.x, point.z);
+                    lastRakePos = { x: point.x, z: point.z };
+                }
+            }
+        });
+
+        renderer.domElement.addEventListener('mouseup', () => {
+            isMouseDown = false;
+            lastRakePos = null;
+        });
+
+        renderer.domElement.addEventListener('contextmenu', (e) => {
+            e.preventDefault();
+        });
+
+        // Tool selection
+        document.querySelectorAll('.tool-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                document.querySelectorAll('.tool-btn').forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                gameState.currentTool = btn.dataset.tool;
+            });
+        });
+
+        // Keyboard
+        document.addEventListener('keydown', (e) => {
+            if (e.key.toLowerCase() === 'r') {
+                resetSand();
+            }
+        });
+
+        // Camera controls
+        let cameraAngle = Math.PI / 4;
+        let cameraDistance = 25;
+        let cameraHeight = 15;
+
+        renderer.domElement.addEventListener('wheel', (e) => {
+            e.preventDefault();
+            cameraDistance = Math.max(10, Math.min(40, cameraDistance + e.deltaY * 0.05));
+        });
+
+        let isDragging = false;
+        let previousMousePosition = { x: 0, y: 0 };
+
+        renderer.domElement.addEventListener('mousedown', (e) => {
+            if (e.button === 1) { // Middle mouse
+                isDragging = true;
+                previousMousePosition = { x: e.clientX, y: e.clientY };
+            }
+        });
+
+        renderer.domElement.addEventListener('mousemove', (e) => {
+            if (isDragging) {
+                const deltaX = e.clientX - previousMousePosition.x;
+                cameraAngle -= deltaX * 0.01;
+                previousMousePosition = { x: e.clientX, y: e.clientY };
+            }
+        });
+
+        renderer.domElement.addEventListener('mouseup', (e) => {
+            if (e.button === 1) {
+                isDragging = false;
+            }
+        });
+
+        // Animation loop
+        function animate() {
+            requestAnimationFrame(animate);
+
+            // Slowly rotate camera
+            cameraAngle += 0.001;
+
+            camera.position.x = Math.sin(cameraAngle) * cameraDistance;
+            camera.position.z = Math.cos(cameraAngle) * cameraDistance;
+            camera.position.y = cameraHeight;
+            camera.lookAt(0, 0, 0);
+
+            // Animate water
+            gameState.objects.forEach(obj => {
+                if (obj.type === 'water') {
+                    obj.mesh.position.y = 0.05 + Math.sin(Date.now() * 0.001) * 0.05;
+                }
+            });
+
+            renderer.render(scene, camera);
+        }
+
+        // Window resize
+        window.addEventListener('resize', () => {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        });
+
+        // Initialize with some patterns
+        for (let i = 0; i < 10; i++) {
+            const x = (Math.random() - 0.5) * 15;
+            const z = (Math.random() - 0.5) * 15;
+            rakeSand(x, z, 1 + Math.random());
+        }
+
+        animate();
+    </script>
+</body>
+</html>
+```

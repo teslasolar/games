@@ -1,0 +1,519 @@
+# Block Stacker 3D
+
+Tetris-inspired 3D puzzle game with rotating camera and challenging gameplay.
+
+```html
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Block Stacker 3D</title>
+    <style>
+        body {
+            margin: 0;
+            overflow: hidden;
+            font-family: 'Courier New', monospace;
+            background: #000;
+        }
+        #hud {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            color: #fff;
+            background: rgba(0, 0, 0, 0.9);
+            padding: 20px;
+            border: 2px solid #00ffff;
+            border-radius: 8px;
+            font-size: 16px;
+            z-index: 100;
+        }
+        .hud-item {
+            margin: 10px 0;
+        }
+        #controls {
+            position: absolute;
+            bottom: 10px;
+            left: 10px;
+            color: #fff;
+            background: rgba(0, 0, 0, 0.9);
+            padding: 15px;
+            border: 2px solid #00ffff;
+            border-radius: 8px;
+            font-size: 12px;
+            z-index: 100;
+        }
+        #nextPiece {
+            position: absolute;
+            top: 200px;
+            right: 10px;
+            width: 150px;
+            height: 150px;
+            border: 2px solid #00ffff;
+            border-radius: 8px;
+            background: rgba(0, 0, 0, 0.9);
+            z-index: 100;
+        }
+        #gameOver {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            text-align: center;
+            color: #fff;
+            background: rgba(0, 0, 0, 0.95);
+            padding: 50px;
+            border: 3px solid #00ffff;
+            border-radius: 15px;
+            z-index: 200;
+            display: none;
+        }
+        #gameOver h1 {
+            font-size: 48px;
+            color: #00ffff;
+            margin-bottom: 20px;
+        }
+        button {
+            padding: 15px 40px;
+            font-size: 18px;
+            background: rgba(0, 255, 255, 0.3);
+            border: 3px solid #00ffff;
+            color: #fff;
+            border-radius: 10px;
+            cursor: pointer;
+            font-family: 'Courier New', monospace;
+            font-weight: bold;
+            margin: 5px;
+        }
+        button:hover {
+            background: rgba(0, 255, 255, 0.6);
+        }
+    </style>
+</head>
+<body>
+    <div id="hud">
+        <div style="font-size: 24px; margin-bottom: 15px; color: #00ffff;">🎮 BLOCK STACKER</div>
+        <div class="hud-item">Score: <span id="score">0</span></div>
+        <div class="hud-item">Lines: <span id="lines">0</span></div>
+        <div class="hud-item">Level: <span id="level">1</span></div>
+    </div>
+
+    <div id="nextPiece"></div>
+
+    <div id="controls">
+        <div style="font-weight: bold; margin-bottom: 10px;">CONTROLS</div>
+        <div>← →: Move</div>
+        <div>↓: Drop Fast</div>
+        <div>↑ W: Rotate</div>
+        <div>SPACE: Hard Drop</div>
+        <div>A D: Rotate Camera</div>
+        <div>P: Pause</div>
+    </div>
+
+    <div id="gameOver">
+        <h1>GAME OVER!</h1>
+        <div style="font-size: 24px; margin: 20px 0;">
+            Final Score: <span id="finalScore">0</span><br>
+            Lines Cleared: <span id="finalLines">0</span>
+        </div>
+        <button id="restartBtn">Play Again</button>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script>
+        // Game setup
+        const GRID_WIDTH = 10;
+        const GRID_HEIGHT = 20;
+        const GRID_DEPTH = 10;
+        const BLOCK_SIZE = 1;
+
+        // Scene setup
+        const scene = new THREE.Scene();
+        scene.background = new THREE.Color(0x000033);
+
+        const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+        camera.position.set(15, 15, 15);
+        camera.lookAt(GRID_WIDTH / 2, GRID_HEIGHT / 2, GRID_DEPTH / 2);
+
+        const renderer = new THREE.WebGLRenderer({ antialias: true });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        document.body.appendChild(renderer.domElement);
+
+        // Next piece renderer
+        const nextScene = new THREE.Scene();
+        nextScene.background = new THREE.Color(0x000033);
+        const nextCamera = new THREE.PerspectiveCamera(50, 1, 0.1, 100);
+        nextCamera.position.set(3, 3, 3);
+        nextCamera.lookAt(0, 0, 0);
+        const nextRenderer = new THREE.WebGLRenderer({ antialias: true });
+        nextRenderer.setSize(150, 150);
+        document.getElementById('nextPiece').appendChild(nextRenderer.domElement);
+
+        // Lighting
+        const ambientLight = new THREE.AmbientLight(0xffffff, 0.5);
+        scene.add(ambientLight);
+        const nextAmbientLight = new THREE.AmbientLight(0xffffff, 0.8);
+        nextScene.add(nextAmbientLight);
+
+        const directionalLight = new THREE.DirectionalLight(0xffffff, 0.7);
+        directionalLight.position.set(10, 20, 10);
+        scene.add(directionalLight);
+
+        // Game grid
+        const grid = [];
+        for (let x = 0; x < GRID_WIDTH; x++) {
+            grid[x] = [];
+            for (let y = 0; y < GRID_HEIGHT; y++) {
+                grid[x][y] = [];
+                for (let z = 0; z < GRID_DEPTH; z++) {
+                    grid[x][y][z] = null;
+                }
+            }
+        }
+
+        // Draw grid
+        const gridHelper = new THREE.GridHelper(Math.max(GRID_WIDTH, GRID_DEPTH), Math.max(GRID_WIDTH, GRID_DEPTH), 0x00ffff, 0x003333);
+        gridHelper.position.y = 0;
+        scene.add(gridHelper);
+
+        // Draw boundaries
+        const boundaryMaterial = new THREE.LineBasicMaterial({ color: 0x00ffff, transparent: true, opacity: 0.3 });
+        const points = [];
+        points.push(new THREE.Vector3(0, 0, 0));
+        points.push(new THREE.Vector3(GRID_WIDTH, 0, 0));
+        points.push(new THREE.Vector3(GRID_WIDTH, GRID_HEIGHT, 0));
+        points.push(new THREE.Vector3(0, GRID_HEIGHT, 0));
+        points.push(new THREE.Vector3(0, 0, 0));
+        points.push(new THREE.Vector3(0, 0, GRID_DEPTH));
+        points.push(new THREE.Vector3(GRID_WIDTH, 0, GRID_DEPTH));
+        points.push(new THREE.Vector3(GRID_WIDTH, 0, 0));
+        const boundaryGeometry = new THREE.BufferGeometry().setFromPoints(points);
+        const boundary = new THREE.Line(boundaryGeometry, boundaryMaterial);
+        scene.add(boundary);
+
+        // Tetromino shapes (in 3D!)
+        const shapes = [
+            { blocks: [[0,0,0], [1,0,0], [2,0,0], [3,0,0]], color: 0x00ffff }, // I
+            { blocks: [[0,0,0], [1,0,0], [0,1,0], [1,1,0]], color: 0xffff00 }, // O
+            { blocks: [[1,0,0], [0,1,0], [1,1,0], [2,1,0]], color: 0xff00ff }, // T
+            { blocks: [[0,1,0], [1,1,0], [1,0,0], [2,0,0]], color: 0x00ff00 }, // S
+            { blocks: [[0,0,0], [1,0,0], [1,1,0], [2,1,0]], color: 0xff0000 }, // Z
+            { blocks: [[0,0,0], [0,1,0], [1,1,0], [2,1,0]], color: 0x0000ff }, // J
+            { blocks: [[2,0,0], [0,1,0], [1,1,0], [2,1,0]], color: 0xffa500 }, // L
+            // 3D shapes
+            { blocks: [[0,0,0], [1,0,0], [0,0,1], [1,0,1]], color: 0xff1493 }, // Flat square
+            { blocks: [[0,0,0], [1,0,0], [0,1,0], [0,0,1]], color: 0x7fff00 }, // Corner 3D
+        ];
+
+        // Game state
+        const gameState = {
+            score: 0,
+            lines: 0,
+            level: 1,
+            isGameOver: false,
+            isPaused: false,
+            currentPiece: null,
+            nextPiece: null,
+            dropTimer: 0,
+            dropInterval: 60,
+            cameraAngle: Math.PI / 4
+        };
+
+        class Piece {
+            constructor(shape, x = GRID_WIDTH / 2 - 1, y = GRID_HEIGHT - 2, z = GRID_DEPTH / 2 - 1) {
+                this.shape = shape;
+                this.blocks = JSON.parse(JSON.stringify(shape.blocks));
+                this.color = shape.color;
+                this.x = Math.floor(x);
+                this.y = Math.floor(y);
+                this.z = Math.floor(z);
+                this.meshes = [];
+
+                this.createMeshes();
+            }
+
+            createMeshes() {
+                this.meshes.forEach(mesh => scene.remove(mesh));
+                this.meshes = [];
+
+                const geometry = new THREE.BoxGeometry(BLOCK_SIZE, BLOCK_SIZE, BLOCK_SIZE);
+                const material = new THREE.MeshPhongMaterial({
+                    color: this.color,
+                    transparent: true,
+                    opacity: 0.9
+                });
+
+                this.blocks.forEach(([bx, by, bz]) => {
+                    const mesh = new THREE.Mesh(geometry, material);
+                    mesh.position.set(
+                        this.x + bx + 0.5,
+                        this.y + by + 0.5,
+                        this.z + bz + 0.5
+                    );
+                    scene.add(mesh);
+                    this.meshes.push(mesh);
+                });
+            }
+
+            move(dx, dy, dz) {
+                this.x += dx;
+                this.y += dy;
+                this.z += dz;
+
+                if (this.checkCollision()) {
+                    this.x -= dx;
+                    this.y -= dy;
+                    this.z -= dz;
+                    return false;
+                }
+
+                this.updatePosition();
+                return true;
+            }
+
+            rotate(axis = 'y') {
+                const oldBlocks = JSON.parse(JSON.stringify(this.blocks));
+
+                this.blocks = this.blocks.map(([x, y, z]) => {
+                    if (axis === 'y') {
+                        return [-z, y, x];
+                    } else if (axis === 'x') {
+                        return [x, -z, y];
+                    } else if (axis === 'z') {
+                        return [y, x, z];
+                    }
+                });
+
+                if (this.checkCollision()) {
+                    this.blocks = oldBlocks;
+                    return false;
+                }
+
+                this.createMeshes();
+                return true;
+            }
+
+            checkCollision() {
+                return this.blocks.some(([bx, by, bz]) => {
+                    const wx = this.x + bx;
+                    const wy = this.y + by;
+                    const wz = this.z + bz;
+
+                    return wx < 0 || wx >= GRID_WIDTH ||
+                           wy < 0 || wy >= GRID_HEIGHT ||
+                           wz < 0 || wz >= GRID_DEPTH ||
+                           grid[wx][wy][wz] !== null;
+                });
+            }
+
+            updatePosition() {
+                this.meshes.forEach((mesh, i) => {
+                    const [bx, by, bz] = this.blocks[i];
+                    mesh.position.set(
+                        this.x + bx + 0.5,
+                        this.y + by + 0.5,
+                        this.z + bz + 0.5
+                    );
+                });
+            }
+
+            lock() {
+                this.blocks.forEach(([bx, by, bz]) => {
+                    const wx = this.x + bx;
+                    const wy = this.y + by;
+                    const wz = this.z + bz;
+
+                    if (wx >= 0 && wx < GRID_WIDTH &&
+                        wy >= 0 && wy < GRID_HEIGHT &&
+                        wz >= 0 && wz < GRID_DEPTH) {
+                        grid[wx][wy][wz] = {
+                            mesh: this.meshes[this.blocks.indexOf([bx, by, bz])],
+                            color: this.color
+                        };
+                    }
+                });
+            }
+
+            remove() {
+                this.meshes.forEach(mesh => scene.remove(mesh));
+            }
+        }
+
+        function spawnPiece() {
+            if (gameState.nextPiece) {
+                gameState.currentPiece = new Piece(gameState.nextPiece);
+                nextScene.children.forEach(child => {
+                    if (child instanceof THREE.Mesh) {
+                        nextScene.remove(child);
+                    }
+                });
+            } else {
+                gameState.currentPiece = new Piece(shapes[Math.floor(Math.random() * shapes.length)]);
+            }
+
+            gameState.nextPiece = shapes[Math.floor(Math.random() * shapes.length)];
+
+            // Show next piece
+            const geometry = new THREE.BoxGeometry(0.5, 0.5, 0.5);
+            const material = new THREE.MeshPhongMaterial({ color: gameState.nextPiece.color });
+
+            gameState.nextPiece.blocks.forEach(([x, y, z]) => {
+                const mesh = new THREE.Mesh(geometry, material);
+                mesh.position.set(x * 0.6 - 0.5, y * 0.6, z * 0.6 - 0.5);
+                nextScene.add(mesh);
+            });
+
+            if (gameState.currentPiece.checkCollision()) {
+                gameOver();
+            }
+        }
+
+        function checkLines() {
+            let linesCleared = 0;
+
+            for (let y = 0; y < GRID_HEIGHT; y++) {
+                let isFull = true;
+
+                for (let x = 0; x < GRID_WIDTH; x++) {
+                    for (let z = 0; z < GRID_DEPTH; z++) {
+                        if (grid[x][y][z] === null) {
+                            isFull = false;
+                            break;
+                        }
+                    }
+                    if (!isFull) break;
+                }
+
+                if (isFull) {
+                    // Remove line
+                    for (let x = 0; x < GRID_WIDTH; x++) {
+                        for (let z = 0; z < GRID_DEPTH; z++) {
+                            if (grid[x][y][z]) {
+                                scene.remove(grid[x][y][z].mesh);
+                                grid[x][y][z] = null;
+                            }
+                        }
+                    }
+
+                    // Move down above blocks
+                    for (let ny = y + 1; ny < GRID_HEIGHT; ny++) {
+                        for (let x = 0; x < GRID_WIDTH; x++) {
+                            for (let z = 0; z < GRID_DEPTH; z++) {
+                                if (grid[x][ny][z]) {
+                                    grid[x][ny - 1][z] = grid[x][ny][z];
+                                    grid[x][ny][z] = null;
+                                    grid[x][ny - 1][z].mesh.position.y -= 1;
+                                }
+                            }
+                        }
+                    }
+
+                    linesCleared++;
+                    y--; // Check this line again
+                }
+            }
+
+            if (linesCleared > 0) {
+                gameState.lines += linesCleared;
+                gameState.score += linesCleared * linesCleared * 100 * gameState.level;
+                gameState.level = Math.floor(gameState.lines / 10) + 1;
+                gameState.dropInterval = Math.max(10, 60 - gameState.level * 5);
+            }
+        }
+
+        // Input
+        const keys = {};
+        document.addEventListener('keydown', (e) => {
+            if (gameState.isGameOver || gameState.isPaused) return;
+
+            if (!keys[e.key]) {
+                keys[e.key] = true;
+
+                if (e.key === 'ArrowLeft' || e.key.toLowerCase() === 'h') {
+                    gameState.currentPiece?.move(-1, 0, 0);
+                } else if (e.key === 'ArrowRight' || e.key.toLowerCase() === 'l') {
+                    gameState.currentPiece?.move(1, 0, 0);
+                } else if (e.key === 'ArrowDown' || e.key.toLowerCase() === 'j') {
+                    gameState.currentPiece?.move(0, -1, 0);
+                } else if (e.key === 'ArrowUp' || e.key.toLowerCase() === 'w') {
+                    gameState.currentPiece?.rotate('y');
+                } else if (e.key.toLowerCase() === 'q') {
+                    gameState.currentPiece?.rotate('x');
+                } else if (e.key.toLowerCase() === 'e') {
+                    gameState.currentPiece?.rotate('z');
+                } else if (e.key === ' ') {
+                    while (gameState.currentPiece?.move(0, -1, 0));
+                } else if (e.key.toLowerCase() === 'a') {
+                    gameState.currentPiece?.move(0, 0, -1);
+                } else if (e.key.toLowerCase() === 'd') {
+                    gameState.currentPiece?.move(0, 0, 1);
+                } else if (e.key.toLowerCase() === 'p') {
+                    gameState.isPaused = !gameState.isPaused;
+                }
+            }
+        });
+
+        document.addEventListener('keyup', (e) => {
+            keys[e.key] = false;
+        });
+
+        document.getElementById('restartBtn').addEventListener('click', () => {
+            location.reload();
+        });
+
+        function gameOver() {
+            gameState.isGameOver = true;
+            document.getElementById('finalScore').textContent = gameState.score;
+            document.getElementById('finalLines').textContent = gameState.lines;
+            document.getElementById('gameOver').style.display = 'block';
+        }
+
+        function updateHUD() {
+            document.getElementById('score').textContent = gameState.score;
+            document.getElementById('lines').textContent = gameState.lines;
+            document.getElementById('level').textContent = gameState.level;
+        }
+
+        // Game loop
+        spawnPiece();
+
+        function animate() {
+            requestAnimationFrame(animate);
+
+            if (!gameState.isGameOver && !gameState.isPaused) {
+                gameState.dropTimer++;
+
+                if (gameState.dropTimer >= gameState.dropInterval) {
+                    gameState.dropTimer = 0;
+
+                    if (gameState.currentPiece) {
+                        if (!gameState.currentPiece.move(0, -1, 0)) {
+                            gameState.currentPiece.lock();
+                            checkLines();
+                            spawnPiece();
+                        }
+                    }
+                }
+
+                // Rotate camera slowly
+                gameState.cameraAngle += 0.002;
+                camera.position.x = Math.cos(gameState.cameraAngle) * 20;
+                camera.position.z = Math.sin(gameState.cameraAngle) * 20;
+                camera.lookAt(GRID_WIDTH / 2, GRID_HEIGHT / 2, GRID_DEPTH / 2);
+
+                updateHUD();
+            }
+
+            renderer.render(scene, camera);
+            nextRenderer.render(nextScene, nextCamera);
+        }
+
+        window.addEventListener('resize', () => {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        });
+
+        animate();
+    </script>
+</body>
+</html>
+```
