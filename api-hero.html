@@ -1,0 +1,575 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>API Hero</title>
+    <style>
+        body {
+            margin: 0;
+            overflow: hidden;
+            font-family: 'Courier New', monospace;
+            background: #000;
+        }
+        #game-container {
+            position: relative;
+            width: 100vw;
+            height: 100vh;
+            background: linear-gradient(180deg, #0a0014 0%, #1a0033 50%, #0a0014 100%);
+        }
+        #highway {
+            position: absolute;
+            bottom: 0;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 600px;
+            height: 100%;
+            perspective: 400px;
+        }
+        #track {
+            position: absolute;
+            bottom: 0;
+            width: 100%;
+            height: 100%;
+            transform-origin: bottom;
+            transform: rotateX(60deg);
+        }
+        .lane {
+            position: absolute;
+            width: 20%;
+            height: 100%;
+            border-left: 2px solid rgba(255, 255, 255, 0.2);
+            box-sizing: border-box;
+        }
+        .lane:nth-child(1) { left: 0%; background: rgba(0, 255, 0, 0.05); }
+        .lane:nth-child(2) { left: 20%; background: rgba(255, 0, 0, 0.05); }
+        .lane:nth-child(3) { left: 40%; background: rgba(255, 255, 0, 0.05); }
+        .lane:nth-child(4) { left: 60%; background: rgba(0, 0, 255, 0.05); }
+        .lane:nth-child(5) { left: 80%; background: rgba(255, 0, 255, 0.05); }
+        .note {
+            position: absolute;
+            width: 80%;
+            left: 10%;
+            height: 40px;
+            border-radius: 10px;
+            box-shadow: 0 0 20px currentColor;
+            border: 3px solid currentColor;
+            transition: transform 0.1s;
+        }
+        .lane:nth-child(1) .note { background: rgba(0, 255, 0, 0.8); color: #0f0; }
+        .lane:nth-child(2) .note { background: rgba(255, 0, 0, 0.8); color: #f00; }
+        .lane:nth-child(3) .note { background: rgba(255, 255, 0, 0.8); color: #ff0; }
+        .lane:nth-child(4) .note { background: rgba(0, 0, 255, 0.8); color: #00f; }
+        .lane:nth-child(5) .note { background: rgba(255, 0, 255, 0.8); color: #f0f; }
+        #hit-zone {
+            position: absolute;
+            bottom: 100px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 600px;
+            height: 80px;
+            border: 3px solid #fff;
+            border-radius: 10px;
+            background: rgba(255, 255, 255, 0.1);
+            box-shadow: 0 0 30px rgba(255, 255, 255, 0.5);
+            z-index: 10;
+        }
+        .key-indicator {
+            position: absolute;
+            bottom: 20px;
+            width: 20%;
+            height: 60px;
+            border: 3px solid #fff;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+            font-weight: bold;
+            color: #fff;
+            background: rgba(0, 0, 0, 0.5);
+            transition: all 0.1s;
+        }
+        .key-indicator:nth-child(1) { left: 0%; }
+        .key-indicator:nth-child(2) { left: 20%; }
+        .key-indicator:nth-child(3) { left: 40%; }
+        .key-indicator:nth-child(4) { left: 60%; }
+        .key-indicator:nth-child(5) { left: 80%; }
+        .key-indicator.active {
+            transform: scale(0.9);
+            box-shadow: 0 0 30px currentColor;
+        }
+        .key-indicator:nth-child(1) { color: #0f0; border-color: #0f0; }
+        .key-indicator:nth-child(2) { color: #f00; border-color: #f00; }
+        .key-indicator:nth-child(3) { color: #ff0; border-color: #ff0; }
+        .key-indicator:nth-child(4) { color: #00f; border-color: #00f; }
+        .key-indicator:nth-child(5) { color: #f0f; border-color: #f0f; }
+        .key-indicator.active:nth-child(1) { background: rgba(0, 255, 0, 0.3); }
+        .key-indicator.active:nth-child(2) { background: rgba(255, 0, 0, 0.3); }
+        .key-indicator.active:nth-child(3) { background: rgba(255, 255, 0, 0.3); }
+        .key-indicator.active:nth-child(4) { background: rgba(0, 0, 255, 0.3); }
+        .key-indicator.active:nth-child(5) { background: rgba(255, 0, 255, 0.3); }
+        #hud {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            color: #fff;
+            font-size: 18px;
+            z-index: 100;
+            text-shadow: 0 0 10px #000;
+        }
+        .hud-item {
+            margin: 10px 0;
+            padding: 10px 15px;
+            background: rgba(0, 0, 0, 0.7);
+            border: 2px solid #fff;
+            border-radius: 8px;
+        }
+        #combo {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            font-size: 48px;
+            font-weight: bold;
+            color: #ffff00;
+            text-shadow: 0 0 20px #ffff00;
+            z-index: 100;
+        }
+        #feedback {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 36px;
+            font-weight: bold;
+            z-index: 1000;
+            pointer-events: none;
+            opacity: 0;
+            transition: opacity 0.3s;
+        }
+        .perfect { color: #0ff; text-shadow: 0 0 30px #0ff; }
+        .good { color: #0f0; text-shadow: 0 0 30px #0f0; }
+        .ok { color: #ff0; text-shadow: 0 0 30px #ff0; }
+        .miss { color: #f00; text-shadow: 0 0 30px #f00; }
+        #menu {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            text-align: center;
+            color: #fff;
+            z-index: 200;
+            background: rgba(0, 0, 0, 0.9);
+            padding: 40px;
+            border: 3px solid #fff;
+            border-radius: 15px;
+            box-shadow: 0 0 50px rgba(255, 255, 255, 0.3);
+        }
+        #menu.hidden { display: none; }
+        #menu h1 {
+            font-size: 48px;
+            margin-bottom: 20px;
+            color: #ff00ff;
+            text-shadow: 0 0 20px #ff00ff;
+        }
+        #menu button {
+            margin: 10px;
+            padding: 15px 40px;
+            font-size: 18px;
+            font-family: 'Courier New', monospace;
+            background: rgba(255, 0, 255, 0.3);
+            border: 3px solid #f0f;
+            color: #fff;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        #menu button:hover {
+            background: rgba(255, 0, 255, 0.6);
+            transform: scale(1.05);
+            box-shadow: 0 0 20px #f0f;
+        }
+        #fileInput { display: none; }
+        .hint {
+            font-size: 14px;
+            color: #aaa;
+            margin-top: 20px;
+        }
+    </style>
+</head>
+<body>
+    <div id="game-container">
+        <div id="menu">
+            <h1>🎸 API HERO</h1>
+            <div style="margin: 20px 0;">
+                <p>Auto-generated notes from audio analysis!</p>
+            </div>
+            <button id="loadAudioBtn">🎵 Load Your Music</button>
+            <button id="startDemoBtn">🎮 Play Demo Song</button>
+            <div class="hint">
+                Keys: A S D F SPACE<br>
+                Notes are generated from audio frequencies!
+            </div>
+        </div>
+
+        <div id="highway">
+            <div id="track">
+                <div class="lane"></div>
+                <div class="lane"></div>
+                <div class="lane"></div>
+                <div class="lane"></div>
+                <div class="lane"></div>
+            </div>
+        </div>
+
+        <div id="hit-zone">
+            <div class="key-indicator">A</div>
+            <div class="key-indicator">S</div>
+            <div class="key-indicator">D</div>
+            <div class="key-indicator">F</div>
+            <div class="key-indicator">SPACE</div>
+        </div>
+
+        <div id="hud">
+            <div class="hud-item">Score: <span id="score">0</span></div>
+            <div class="hud-item">Streak: <span id="streak">0</span></div>
+            <div class="hud-item">Accuracy: <span id="accuracy">100%</span></div>
+        </div>
+
+        <div id="combo"></div>
+        <div id="feedback"></div>
+    </div>
+
+    <input type="file" id="fileInput" accept="audio/*">
+
+    <script>
+        // Game state
+        const gameState = {
+            score: 0,
+            streak: 0,
+            combo: 0,
+            hits: 0,
+            misses: 0,
+            isPlaying: false,
+            notes: [],
+            activeNotes: []
+        };
+
+        // Audio setup
+        const audioContext = new AudioContext();
+        const analyser = audioContext.createAnalyser();
+        analyser.fftSize = 1024;
+        analyser.smoothingTimeConstant = 0.8;
+        const bufferLength = analyser.frequencyBinCount;
+        const dataArray = new Uint8Array(bufferLength);
+
+        let audioSource = null;
+        let audio = null;
+        let startTime = 0;
+
+        // DOM elements
+        const lanes = document.querySelectorAll('.lane');
+        const keyIndicators = document.querySelectorAll('.key-indicator');
+        const menu = document.getElementById('menu');
+
+        // Key mapping
+        const keys = ['a', 's', 'd', 'f', ' '];
+        const keyStates = [false, false, false, false, false];
+
+        // Note generation from audio analysis
+        class NoteGenerator {
+            constructor() {
+                this.lastNoteTime = [0, 0, 0, 0, 0];
+                this.threshold = 150;
+                this.minGap = 0.15; // Minimum seconds between notes in same lane
+            }
+
+            generateNotes(currentTime) {
+                analyser.getByteFrequencyData(dataArray);
+
+                // Divide frequency spectrum into 5 ranges
+                const ranges = [
+                    { start: 0, end: 50, lane: 0 },      // Bass
+                    { start: 50, end: 100, lane: 1 },    // Low-mid
+                    { start: 100, end: 200, lane: 2 },   // Mid
+                    { start: 200, end: 300, lane: 3 },   // High-mid
+                    { start: 300, end: 400, lane: 4 }    // High
+                ];
+
+                ranges.forEach(range => {
+                    let sum = 0;
+                    let count = 0;
+                    for (let i = range.start; i < range.end && i < bufferLength; i++) {
+                        sum += dataArray[i];
+                        count++;
+                    }
+                    const avg = sum / count;
+
+                    // Generate note if frequency is strong enough and enough time has passed
+                    if (avg > this.threshold &&
+                        currentTime - this.lastNoteTime[range.lane] > this.minGap) {
+
+                        const note = new Note(range.lane, currentTime + 2); // 2 second lookahead
+                        gameState.notes.push(note);
+                        this.lastNoteTime[range.lane] = currentTime;
+                    }
+                });
+            }
+        }
+
+        const noteGenerator = new NoteGenerator();
+
+        // Note class
+        class Note {
+            constructor(lane, hitTime) {
+                this.lane = lane;
+                this.hitTime = hitTime;
+                this.element = document.createElement('div');
+                this.element.className = 'note';
+                this.hit = false;
+                this.missed = false;
+
+                lanes[lane].appendChild(this.element);
+            }
+
+            update(currentTime) {
+                const timeUntilHit = this.hitTime - currentTime;
+                const position = (timeUntilHit / 2) * 100; // 2 seconds to fall
+
+                if (position < -10 && !this.hit && !this.missed) {
+                    this.missed = true;
+                    gameState.misses++;
+                    gameState.streak = 0;
+                    gameState.combo = 0;
+                    this.remove();
+                    return false;
+                }
+
+                if (position < 110) {
+                    this.element.style.bottom = position + '%';
+                    return true;
+                } else {
+                    return true;
+                }
+            }
+
+            checkHit(currentTime) {
+                const timeDiff = Math.abs(this.hitTime - currentTime);
+
+                if (timeDiff < 0.05) return 'perfect';
+                if (timeDiff < 0.1) return 'good';
+                if (timeDiff < 0.15) return 'ok';
+                return null;
+            }
+
+            remove() {
+                if (this.element.parentNode) {
+                    this.element.parentNode.removeChild(this.element);
+                }
+            }
+        }
+
+        // Input handling
+        document.addEventListener('keydown', (e) => {
+            const key = e.key.toLowerCase();
+            const index = keys.indexOf(key);
+
+            if (index !== -1 && !keyStates[index]) {
+                keyStates[index] = true;
+                keyIndicators[index].classList.add('active');
+
+                if (gameState.isPlaying) {
+                    checkHit(index);
+                }
+            }
+        });
+
+        document.addEventListener('keyup', (e) => {
+            const key = e.key.toLowerCase();
+            const index = keys.indexOf(key);
+
+            if (index !== -1) {
+                keyStates[index] = false;
+                keyIndicators[index].classList.remove('active');
+            }
+        });
+
+        function checkHit(lane) {
+            const currentTime = audioContext.currentTime - startTime;
+            const notesInLane = gameState.notes.filter(n => n.lane === lane && !n.hit && !n.missed);
+
+            let closestNote = null;
+            let minTimeDiff = Infinity;
+
+            notesInLane.forEach(note => {
+                const timeDiff = Math.abs(note.hitTime - currentTime);
+                if (timeDiff < minTimeDiff && timeDiff < 0.2) {
+                    minTimeDiff = timeDiff;
+                    closestNote = note;
+                }
+            });
+
+            if (closestNote) {
+                const result = closestNote.checkHit(currentTime);
+
+                if (result) {
+                    closestNote.hit = true;
+                    closestNote.remove();
+
+                    let points = 0;
+                    if (result === 'perfect') points = 100;
+                    else if (result === 'good') points = 75;
+                    else if (result === 'ok') points = 50;
+
+                    gameState.score += points * (1 + gameState.combo * 0.1);
+                    gameState.hits++;
+                    gameState.streak++;
+                    gameState.combo++;
+
+                    showFeedback(result.toUpperCase(), result);
+                    updateHUD();
+                }
+            }
+        }
+
+        function showFeedback(text, type) {
+            const feedback = document.getElementById('feedback');
+            feedback.textContent = text;
+            feedback.className = type;
+            feedback.style.opacity = '1';
+
+            setTimeout(() => {
+                feedback.style.opacity = '0';
+            }, 300);
+        }
+
+        function updateHUD() {
+            document.getElementById('score').textContent = Math.floor(gameState.score);
+            document.getElementById('streak').textContent = gameState.streak;
+
+            const total = gameState.hits + gameState.misses;
+            const accuracy = total > 0 ? (gameState.hits / total * 100).toFixed(1) : 100;
+            document.getElementById('accuracy').textContent = accuracy + '%';
+
+            const combo = document.getElementById('combo');
+            if (gameState.combo > 5) {
+                combo.textContent = gameState.combo + 'x';
+                combo.style.display = 'block';
+            } else {
+                combo.style.display = 'none';
+            }
+        }
+
+        // Audio loading
+        document.getElementById('loadAudioBtn').addEventListener('click', () => {
+            document.getElementById('fileInput').click();
+        });
+
+        document.getElementById('fileInput').addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if (file) {
+                const url = URL.createObjectURL(file);
+                loadAudio(url);
+            }
+        });
+
+        document.getElementById('startDemoBtn').addEventListener('click', () => {
+            generateDemoSong();
+        });
+
+        function loadAudio(url) {
+            if (audio) {
+                audio.pause();
+            }
+
+            audio = new Audio(url);
+            audioSource = audioContext.createMediaElementSource(audio);
+            audioSource.connect(analyser);
+            analyser.connect(audioContext.destination);
+
+            startGame();
+        }
+
+        function generateDemoSong() {
+            // Create a demo song with oscillators
+            const now = audioContext.currentTime;
+            const duration = 60; // 60 second demo
+
+            // Bass line
+            const bass = audioContext.createOscillator();
+            const bassGain = audioContext.createGain();
+            bass.frequency.value = 110;
+            bass.type = 'sawtooth';
+            bassGain.gain.value = 0.3;
+            bass.connect(bassGain);
+            bassGain.connect(analyser);
+            analyser.connect(audioContext.destination);
+            bass.start(now);
+            bass.stop(now + duration);
+
+            // Melody
+            const melody = audioContext.createOscillator();
+            const melodyGain = audioContext.createGain();
+            melody.frequency.value = 440;
+            melody.type = 'square';
+            melodyGain.gain.value = 0.2;
+            melody.connect(melodyGain);
+            melodyGain.connect(analyser);
+            melody.start(now);
+            melody.stop(now + duration);
+
+            // High hat
+            const hihat = audioContext.createOscillator();
+            const hihatGain = audioContext.createGain();
+            hihat.frequency.value = 2000;
+            hihat.type = 'sine';
+            hihatGain.gain.value = 0.1;
+            hihat.connect(hihatGain);
+            hihatGain.connect(analyser);
+            hihat.start(now);
+            hihat.stop(now + duration);
+
+            // Modulate frequencies for variety
+            setInterval(() => {
+                if (!gameState.isPlaying) return;
+                const notes = [110, 123, 147, 165, 196, 220];
+                melody.frequency.value = notes[Math.floor(Math.random() * notes.length)];
+                bass.frequency.value = notes[Math.floor(Math.random() * 3)] / 2;
+            }, 500);
+
+            startGame();
+        }
+
+        function startGame() {
+            menu.classList.add('hidden');
+            gameState.isPlaying = true;
+            startTime = audioContext.currentTime;
+
+            if (audio) {
+                audio.play();
+            }
+
+            gameLoop();
+        }
+
+        function gameLoop() {
+            if (!gameState.isPlaying) return;
+
+            const currentTime = audioContext.currentTime - startTime;
+
+            // Generate new notes from audio analysis
+            noteGenerator.generateNotes(currentTime);
+
+            // Update existing notes
+            gameState.notes = gameState.notes.filter(note => {
+                return note.update(currentTime);
+            });
+
+            requestAnimationFrame(gameLoop);
+        }
+
+        // Window resize
+        window.addEventListener('resize', () => {
+            // Adjust highway if needed
+        });
+    </script>
+</body>
+</html>

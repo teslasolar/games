@@ -1,0 +1,523 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Konomi Games - 3D Interactive Gallery</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Courier New', monospace;
+            background: linear-gradient(135deg, #0a0a0a, #1a1a2e, #0f3460);
+            color: #00ff88;
+            overflow: hidden;
+        }
+
+        .container {
+            display: flex;
+            height: 100vh;
+        }
+
+        .sidebar {
+            width: 300px;
+            background: rgba(0, 20, 40, 0.95);
+            border-right: 2px solid #00ff88;
+            padding: 20px;
+            overflow-y: auto;
+            backdrop-filter: blur(10px);
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 20px;
+            padding-bottom: 15px;
+            border-bottom: 2px solid #00ff88;
+        }
+
+        .header h1 {
+            font-size: 24px;
+            color: #00ff88;
+            text-shadow: 0 0 10px rgba(0, 255, 136, 0.5);
+        }
+
+        .header p {
+            font-size: 10px;
+            color: #88ff88;
+            margin-top: 5px;
+        }
+
+        .game-list {
+            list-style: none;
+        }
+
+        .game-item {
+            background: rgba(0, 255, 136, 0.1);
+            border: 1px solid #00ff88;
+            border-radius: 8px;
+            padding: 12px;
+            margin-bottom: 10px;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .game-item:hover {
+            background: rgba(0, 255, 136, 0.2);
+            transform: translateX(5px);
+            box-shadow: 0 0 15px rgba(0, 255, 136, 0.3);
+        }
+
+        .game-item.active {
+            background: rgba(0, 255, 136, 0.3);
+            border-width: 2px;
+            box-shadow: 0 0 20px rgba(0, 255, 136, 0.5);
+        }
+
+        .game-icon {
+            font-size: 20px;
+            margin-right: 8px;
+        }
+
+        .game-name {
+            font-weight: bold;
+            font-size: 14px;
+        }
+
+        .game-desc {
+            font-size: 9px;
+            color: #88ff88;
+            margin-top: 4px;
+        }
+
+        .content {
+            flex: 1;
+            position: relative;
+        }
+
+        .game-frame {
+            width: 100%;
+            height: 100%;
+            border: none;
+            display: none;
+        }
+
+        .game-frame.active {
+            display: block;
+        }
+
+        .loading {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            text-align: center;
+            font-size: 20px;
+            color: #00ff88;
+        }
+
+        .spinner {
+            border: 4px solid rgba(0, 255, 136, 0.1);
+            border-top: 4px solid #00ff88;
+            border-radius: 50%;
+            width: 50px;
+            height: 50px;
+            animation: spin 1s linear infinite;
+            margin: 20px auto;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .stats {
+            position: absolute;
+            bottom: 10px;
+            left: 310px;
+            background: rgba(0, 20, 40, 0.9);
+            border: 1px solid #00ff88;
+            border-radius: 8px;
+            padding: 8px 12px;
+            font-size: 10px;
+            backdrop-filter: blur(5px);
+        }
+
+        .fullscreen-btn {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background: rgba(0, 255, 136, 0.2);
+            border: 2px solid #00ff88;
+            border-radius: 8px;
+            padding: 10px 15px;
+            color: #00ff88;
+            cursor: pointer;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+            transition: all 0.3s;
+            z-index: 1000;
+        }
+
+        .fullscreen-btn:hover {
+            background: rgba(0, 255, 136, 0.4);
+            box-shadow: 0 0 15px rgba(0, 255, 136, 0.5);
+        }
+
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: rgba(0, 0, 0, 0.3);
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: #00ff88;
+            border-radius: 4px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: #00ff00;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="sidebar">
+            <div class="header">
+                <h1>🎮 KONOMI GAMES</h1>
+                <p>3D Interactive Gallery</p>
+                <p style="font-size: 8px; margin-top: 10px;">Powered by Three.js</p>
+            </div>
+
+            <ul class="game-list" id="gameList">
+                <!-- Games will be loaded here -->
+            </ul>
+        </div>
+
+        <div class="content" id="content">
+            <div class="loading" id="loading">
+                <div class="spinner"></div>
+                Loading Games...
+            </div>
+
+            <button class="fullscreen-btn" id="fullscreenBtn" style="display: none;">
+                🖵 Fullscreen
+            </button>
+
+            <div class="stats" id="stats" style="display: none;">
+                <span id="statsText">Loading...</span>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const GameGallery = {
+            games: [
+                {
+                    id: 'cube-spinner',
+                    name: 'Cube Spinner',
+                    icon: '🎲',
+                    desc: 'Interactive rotating cube with mouse control',
+                    file: 'cube-spinner.md'
+                },
+                {
+                    id: 'particle-system',
+                    name: 'Particle Storm',
+                    icon: '✨',
+                    desc: 'Interactive particle system with physics',
+                    file: 'particle-system.md'
+                },
+                {
+                    id: 'space-shooter',
+                    name: 'Space Shooter',
+                    icon: '🚀',
+                    desc: 'Classic space shooter in 3D',
+                    file: 'space-shooter.md'
+                },
+                {
+                    id: 'terrain-explorer',
+                    name: 'Terrain Explorer',
+                    icon: '🏔️',
+                    desc: 'Navigate procedural 3D terrain',
+                    file: 'terrain-explorer.md'
+                },
+                {
+                    id: 'neural-network-viz',
+                    name: 'Neural Network',
+                    icon: '🧠',
+                    desc: 'Visualize AI neural network training',
+                    file: 'neural-network-viz.md'
+                },
+                {
+                    id: 'block-breaker',
+                    name: 'Block Breaker 3D',
+                    icon: '🧱',
+                    desc: 'Break blocks in 3D space',
+                    file: 'block-breaker.md'
+                },
+                {
+                    id: 'fractal-explorer',
+                    name: 'Fractal Explorer',
+                    icon: '🌀',
+                    desc: 'Explore infinite fractal patterns',
+                    file: 'fractal-explorer.md'
+                },
+                {
+                    id: 'konomi-os',
+                    name: 'Konomi OS',
+                    icon: '🖥️',
+                    desc: 'Full 3D Operating System with AI',
+                    file: 'konomi-os.md'
+                },
+                {
+                    id: 'maze-runner',
+                    name: 'Maze Runner',
+                    icon: '🧭',
+                    desc: 'First-person procedural maze exploration',
+                    file: 'maze-runner.md'
+                },
+                {
+                    id: 'tower-defense',
+                    name: 'Tower Defense',
+                    icon: '⚔️',
+                    desc: 'Strategic 3D tower defense with waves',
+                    file: 'tower-defense.md'
+                },
+                {
+                    id: 'physics-sandbox',
+                    name: 'Physics Sandbox',
+                    icon: '🎮',
+                    desc: 'Interactive physics playground',
+                    file: 'physics-sandbox.md'
+                },
+                {
+                    id: 'neon-racer',
+                    name: 'Neon Racer',
+                    icon: '🏎️',
+                    desc: 'Futuristic high-speed racing game',
+                    file: 'neon-racer.md'
+                },
+                {
+                    id: 'music-visualizer',
+                    name: 'Music Visualizer',
+                    icon: '🎵',
+                    desc: 'Audio-reactive 3D visualization',
+                    file: 'music-visualizer.md'
+                },
+                {
+                    id: 'city-builder',
+                    name: 'City Builder',
+                    icon: '🏙️',
+                    desc: 'Build and manage your 3D city',
+                    file: 'city-builder.md'
+                },
+                {
+                    id: 'api-hero',
+                    name: 'API Hero',
+                    icon: '🎸',
+                    desc: 'Guitar Hero with auto-generated notes from audio',
+                    file: 'api-hero.md'
+                },
+                {
+                    id: 'platformer-3d',
+                    name: '3D Platformer',
+                    icon: '🏃',
+                    desc: 'Fast-paced platforming with obstacles and coins',
+                    file: 'platformer-3d.md'
+                },
+                {
+                    id: 'block-stacker',
+                    name: 'Block Stacker 3D',
+                    icon: '🧩',
+                    desc: 'Tetris-inspired 3D puzzle game',
+                    file: 'block-stacker.md'
+                },
+                {
+                    id: 'sky-combat',
+                    name: 'Sky Combat',
+                    icon: '✈️',
+                    desc: 'Aerial dogfight shooter with missiles',
+                    file: 'sky-combat.md'
+                },
+                {
+                    id: 'zen-garden',
+                    name: 'Zen Garden',
+                    icon: '🏯',
+                    desc: 'Relaxing zen garden builder',
+                    file: 'zen-garden.md'
+                },
+                {
+                    id: 'dungeon-crawler',
+                    name: 'Dungeon Crawler',
+                    icon: '⚔️',
+                    desc: 'Procedural dungeon exploration with combat',
+                    file: 'dungeon-crawler.md'
+                },
+                {
+                    id: 'portal-puzzle',
+                    name: 'Portal Puzzle',
+                    icon: '🌀',
+                    desc: 'Portal-based physics puzzle game',
+                    file: 'portal-puzzle.md'
+                }
+            ],
+
+            currentGame: null,
+
+            init() {
+                this.loadGameList();
+                this.setupEventListeners();
+            },
+
+            loadGameList() {
+                const gameList = document.getElementById('gameList');
+
+                this.games.forEach(game => {
+                    const li = document.createElement('li');
+                    li.className = 'game-item';
+                    li.dataset.gameId = game.id;
+                    li.innerHTML = `
+                        <div>
+                            <span class="game-icon">${game.icon}</span>
+                            <span class="game-name">${game.name}</span>
+                        </div>
+                        <div class="game-desc">${game.desc}</div>
+                    `;
+
+                    li.addEventListener('click', () => this.loadGame(game));
+                    gameList.appendChild(li);
+                });
+
+                // Load first game by default
+                setTimeout(() => this.loadGame(this.games[0]), 500);
+            },
+
+            async loadGame(game) {
+                document.getElementById('loading').style.display = 'block';
+                document.getElementById('fullscreenBtn').style.display = 'none';
+                document.getElementById('stats').style.display = 'none';
+
+                // Update active state
+                document.querySelectorAll('.game-item').forEach(item => {
+                    item.classList.remove('active');
+                    if (item.dataset.gameId === game.id) {
+                        item.classList.add('active');
+                    }
+                });
+
+                try {
+                    // Fetch the markdown file
+                    const response = await fetch(game.file);
+                    if (!response.ok) throw new Error('Game file not found');
+
+                    const mdContent = await response.text();
+
+                    // Extract HTML from markdown code block
+                    const htmlMatch = mdContent.match(/```html\n([\s\S]*?)\n```/);
+                    if (!htmlMatch) {
+                        // If no code block, use the entire content
+                        this.displayGame(mdContent, game);
+                    } else {
+                        this.displayGame(htmlMatch[1], game);
+                    }
+                } catch (error) {
+                    console.error('Error loading game:', error);
+                    document.getElementById('loading').innerHTML = `
+                        <div class="spinner"></div>
+                        <div style="color: #ff4444; margin-top: 20px;">
+                            Failed to load ${game.name}<br>
+                            <small style="font-size: 12px;">${error.message}</small>
+                        </div>
+                    `;
+                }
+            },
+
+            displayGame(html, game) {
+                const content = document.getElementById('content');
+
+                // Remove old iframes
+                content.querySelectorAll('.game-frame').forEach(frame => frame.remove());
+
+                // Create new iframe
+                const iframe = document.createElement('iframe');
+                iframe.className = 'game-frame active';
+                iframe.sandbox = 'allow-scripts allow-same-origin';
+
+                content.appendChild(iframe);
+
+                // Write content to iframe
+                const iframeDoc = iframe.contentDocument || iframe.contentWindow.document;
+                iframeDoc.open();
+                iframeDoc.write(html);
+                iframeDoc.close();
+
+                this.currentGame = game;
+                document.getElementById('loading').style.display = 'none';
+                document.getElementById('fullscreenBtn').style.display = 'block';
+                document.getElementById('stats').style.display = 'block';
+
+                this.updateStats(game);
+            },
+
+            updateStats(game) {
+                const statsText = document.getElementById('statsText');
+                statsText.innerHTML = `
+                    <strong>${game.icon} ${game.name}</strong><br>
+                    ${game.desc}
+                `;
+            },
+
+            setupEventListeners() {
+                document.getElementById('fullscreenBtn').addEventListener('click', () => {
+                    const iframe = document.querySelector('.game-frame.active');
+                    if (iframe) {
+                        if (iframe.requestFullscreen) {
+                            iframe.requestFullscreen();
+                        } else if (iframe.webkitRequestFullscreen) {
+                            iframe.webkitRequestFullscreen();
+                        } else if (iframe.msRequestFullscreen) {
+                            iframe.msRequestFullscreen();
+                        }
+                    }
+                });
+
+                // Keyboard shortcuts
+                document.addEventListener('keydown', (e) => {
+                    if (e.key === 'Escape') {
+                        // Exit fullscreen
+                        if (document.fullscreenElement) {
+                            document.exitFullscreen();
+                        }
+                    } else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') {
+                        // Previous game
+                        e.preventDefault();
+                        this.navigateGame(-1);
+                    } else if (e.key === 'ArrowRight' || e.key === 'ArrowDown') {
+                        // Next game
+                        e.preventDefault();
+                        this.navigateGame(1);
+                    }
+                });
+            },
+
+            navigateGame(direction) {
+                const currentIndex = this.games.findIndex(g => g.id === this.currentGame?.id);
+                if (currentIndex === -1) return;
+
+                const newIndex = (currentIndex + direction + this.games.length) % this.games.length;
+                this.loadGame(this.games[newIndex]);
+            }
+        };
+
+        // Initialize when page loads
+        window.addEventListener('load', () => {
+            GameGallery.init();
+        });
+    </script>
+</body>
+</html>
