@@ -1,0 +1,367 @@
+# Maze Runner 3D
+
+An immersive first-person maze exploration game with procedurally generated mazes.
+
+```html
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Maze Runner 3D</title>
+    <style>
+        body {
+            margin: 0;
+            overflow: hidden;
+            font-family: 'Courier New', monospace;
+            background: #000;
+        }
+        #info {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            color: #00ff88;
+            background: rgba(0, 0, 0, 0.8);
+            padding: 15px;
+            border: 2px solid #00ff88;
+            border-radius: 8px;
+            font-size: 14px;
+            z-index: 100;
+        }
+        #minimap {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            width: 200px;
+            height: 200px;
+            border: 2px solid #00ff88;
+            background: rgba(0, 0, 0, 0.8);
+            z-index: 100;
+        }
+        .key-hint {
+            font-size: 11px;
+            color: #88ff88;
+            margin-top: 5px;
+        }
+    </style>
+</head>
+<body>
+    <div id="info">
+        <div>🧭 MAZE RUNNER</div>
+        <div class="key-hint">WASD/Arrows: Move</div>
+        <div class="key-hint">Mouse: Look Around</div>
+        <div class="key-hint">SPACE: New Maze</div>
+        <div id="status"></div>
+    </div>
+    <canvas id="minimap"></canvas>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script>
+        // Scene setup
+        const scene = new THREE.Scene();
+        scene.fog = new THREE.Fog(0x000000, 0, 50);
+
+        const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+        camera.position.set(1, 1.6, 1);
+
+        const renderer = new THREE.WebGLRenderer({ antialias: true });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.shadowMap.enabled = true;
+        document.body.appendChild(renderer.domElement);
+
+        // Minimap setup
+        const minimapCanvas = document.getElementById('minimap');
+        const minimapCtx = minimapCanvas.getContext('2d');
+        minimapCanvas.width = 200;
+        minimapCanvas.height = 200;
+
+        // Lighting
+        const ambientLight = new THREE.AmbientLight(0x404040, 0.3);
+        scene.add(ambientLight);
+
+        const flashlight = new THREE.SpotLight(0xffffff, 1.5);
+        flashlight.angle = Math.PI / 6;
+        flashlight.penumbra = 0.3;
+        flashlight.decay = 2;
+        flashlight.distance = 30;
+        flashlight.castShadow = true;
+        camera.add(flashlight);
+        flashlight.target.position.set(0, 0, -1);
+        camera.add(flashlight.target);
+        scene.add(camera);
+
+        // Maze generation
+        class Maze {
+            constructor(size) {
+                this.size = size;
+                this.grid = Array(size).fill().map(() => Array(size).fill(1));
+                this.generate();
+                this.placeExit();
+            }
+
+            generate() {
+                const stack = [];
+                const start = [1, 1];
+                this.grid[start[0]][start[1]] = 0;
+                stack.push(start);
+
+                while (stack.length > 0) {
+                    const current = stack[stack.length - 1];
+                    const neighbors = this.getUnvisitedNeighbors(current);
+
+                    if (neighbors.length > 0) {
+                        const next = neighbors[Math.floor(Math.random() * neighbors.length)];
+                        const wall = [(current[0] + next[0]) / 2, (current[1] + next[1]) / 2];
+
+                        this.grid[wall[0]][wall[1]] = 0;
+                        this.grid[next[0]][next[1]] = 0;
+                        stack.push(next);
+                    } else {
+                        stack.pop();
+                    }
+                }
+            }
+
+            getUnvisitedNeighbors([x, y]) {
+                const neighbors = [];
+                const directions = [[0, 2], [2, 0], [0, -2], [-2, 0]];
+
+                for (const [dx, dy] of directions) {
+                    const nx = x + dx;
+                    const ny = y + dy;
+                    if (nx > 0 && nx < this.size - 1 && ny > 0 && ny < this.size - 1 && this.grid[nx][ny] === 1) {
+                        neighbors.push([nx, ny]);
+                    }
+                }
+                return neighbors;
+            }
+
+            placeExit() {
+                this.exit = [this.size - 2, this.size - 2];
+                this.grid[this.exit[0]][this.exit[1]] = 2;
+            }
+        }
+
+        let maze;
+        let walls = [];
+        let exitMarker;
+
+        function createMaze() {
+            // Clear old maze
+            walls.forEach(wall => scene.remove(wall));
+            walls = [];
+            if (exitMarker) scene.remove(exitMarker);
+
+            const mazeSize = 21;
+            maze = new Maze(mazeSize);
+
+            // Wall material
+            const wallMaterial = new THREE.MeshPhongMaterial({
+                color: 0x00ff88,
+                emissive: 0x004433,
+                shininess: 30
+            });
+
+            const wallHeight = 3;
+
+            // Create walls
+            for (let x = 0; x < mazeSize; x++) {
+                for (let z = 0; z < mazeSize; z++) {
+                    if (maze.grid[x][z] === 1) {
+                        const wallGeometry = new THREE.BoxGeometry(1, wallHeight, 1);
+                        const wall = new THREE.Mesh(wallGeometry, wallMaterial);
+                        wall.position.set(x, wallHeight / 2, z);
+                        wall.castShadow = true;
+                        wall.receiveShadow = true;
+                        scene.add(wall);
+                        walls.push(wall);
+                    }
+                }
+            }
+
+            // Create floor
+            const floorGeometry = new THREE.PlaneGeometry(mazeSize, mazeSize);
+            const floorMaterial = new THREE.MeshPhongMaterial({
+                color: 0x111111,
+                side: THREE.DoubleSide
+            });
+            const floor = new THREE.Mesh(floorGeometry, floorMaterial);
+            floor.rotation.x = -Math.PI / 2;
+            floor.position.set(mazeSize / 2, 0, mazeSize / 2);
+            floor.receiveShadow = true;
+            scene.add(floor);
+            walls.push(floor);
+
+            // Create exit marker
+            const exitGeometry = new THREE.CylinderGeometry(0.3, 0.3, 2, 32);
+            const exitMaterial = new THREE.MeshPhongMaterial({
+                color: 0xffff00,
+                emissive: 0xffff00,
+                emissiveIntensity: 0.5
+            });
+            exitMarker = new THREE.Mesh(exitGeometry, exitMaterial);
+            exitMarker.position.set(maze.exit[0], 1, maze.exit[1]);
+            scene.add(exitMarker);
+
+            // Add exit light
+            const exitLight = new THREE.PointLight(0xffff00, 1, 10);
+            exitLight.position.copy(exitMarker.position);
+            scene.add(exitLight);
+            walls.push(exitLight);
+
+            // Reset player position
+            camera.position.set(1, 1.6, 1);
+            yaw = 0;
+            pitch = 0;
+        }
+
+        // Player controls
+        const keys = {};
+        let yaw = 0;
+        let pitch = 0;
+        const moveSpeed = 0.1;
+        const mouseSensitivity = 0.002;
+
+        document.addEventListener('keydown', (e) => keys[e.key.toLowerCase()] = true);
+        document.addEventListener('keyup', (e) => {
+            keys[e.key.toLowerCase()] = false;
+            if (e.key === ' ') createMaze();
+        });
+
+        let isPointerLocked = false;
+        renderer.domElement.addEventListener('click', () => {
+            renderer.domElement.requestPointerLock();
+        });
+
+        document.addEventListener('pointerlockchange', () => {
+            isPointerLocked = document.pointerLockElement === renderer.domElement;
+        });
+
+        document.addEventListener('mousemove', (e) => {
+            if (!isPointerLocked) return;
+
+            yaw -= e.movementX * mouseSensitivity;
+            pitch -= e.movementY * mouseSensitivity;
+            pitch = Math.max(-Math.PI / 2, Math.min(Math.PI / 2, pitch));
+        });
+
+        function checkCollision(newPos) {
+            const gridX = Math.floor(newPos.x);
+            const gridZ = Math.floor(newPos.z);
+
+            if (gridX < 0 || gridX >= maze.size || gridZ < 0 || gridZ >= maze.size) {
+                return true;
+            }
+
+            return maze.grid[gridX][gridZ] === 1;
+        }
+
+        function updatePlayer() {
+            camera.rotation.order = 'YXZ';
+            camera.rotation.y = yaw;
+            camera.rotation.x = pitch;
+
+            const forward = new THREE.Vector3();
+            const right = new THREE.Vector3();
+
+            camera.getWorldDirection(forward);
+            forward.y = 0;
+            forward.normalize();
+            right.crossVectors(forward, new THREE.Vector3(0, 1, 0)).normalize();
+
+            const movement = new THREE.Vector3();
+
+            if (keys['w'] || keys['arrowup']) movement.add(forward);
+            if (keys['s'] || keys['arrowdown']) movement.sub(forward);
+            if (keys['a'] || keys['arrowleft']) movement.sub(right);
+            if (keys['d'] || keys['arrowright']) movement.add(right);
+
+            if (movement.length() > 0) {
+                movement.normalize().multiplyScalar(moveSpeed);
+                const newPos = camera.position.clone().add(movement);
+
+                if (!checkCollision(newPos)) {
+                    camera.position.copy(newPos);
+                }
+            }
+
+            // Check if reached exit
+            const distToExit = camera.position.distanceTo(exitMarker.position);
+            if (distToExit < 1.5) {
+                setTimeout(() => {
+                    alert('🎉 Maze Complete! Press SPACE for new maze.');
+                    createMaze();
+                }, 100);
+            }
+        }
+
+        function drawMinimap() {
+            minimapCtx.fillStyle = '#000';
+            minimapCtx.fillRect(0, 0, 200, 200);
+
+            const cellSize = 200 / maze.size;
+
+            for (let x = 0; x < maze.size; x++) {
+                for (let z = 0; z < maze.size; z++) {
+                    if (maze.grid[x][z] === 1) {
+                        minimapCtx.fillStyle = '#00ff88';
+                    } else if (maze.grid[x][z] === 2) {
+                        minimapCtx.fillStyle = '#ffff00';
+                    } else {
+                        minimapCtx.fillStyle = '#001111';
+                    }
+                    minimapCtx.fillRect(x * cellSize, z * cellSize, cellSize, cellSize);
+                }
+            }
+
+            // Draw player
+            minimapCtx.fillStyle = '#ff0000';
+            minimapCtx.beginPath();
+            minimapCtx.arc(
+                camera.position.x * cellSize,
+                camera.position.z * cellSize,
+                3, 0, Math.PI * 2
+            );
+            minimapCtx.fill();
+
+            // Draw player direction
+            minimapCtx.strokeStyle = '#ff0000';
+            minimapCtx.beginPath();
+            minimapCtx.moveTo(camera.position.x * cellSize, camera.position.z * cellSize);
+            const dirX = camera.position.x * cellSize + Math.sin(-yaw) * 10;
+            const dirZ = camera.position.z * cellSize + Math.cos(-yaw) * 10;
+            minimapCtx.lineTo(dirX, dirZ);
+            minimapCtx.stroke();
+        }
+
+        // Animation loop
+        function animate() {
+            requestAnimationFrame(animate);
+
+            updatePlayer();
+
+            // Animate exit marker
+            if (exitMarker) {
+                exitMarker.rotation.y += 0.02;
+            }
+
+            drawMinimap();
+
+            const distToExit = camera.position.distanceTo(exitMarker.position);
+            document.getElementById('status').innerHTML = `<div style="margin-top: 10px;">Distance to Exit: ${distToExit.toFixed(1)}m</div>`;
+
+            renderer.render(scene, camera);
+        }
+
+        // Window resize
+        window.addEventListener('resize', () => {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        });
+
+        // Initialize
+        createMaze();
+        animate();
+    </script>
+</body>
+</html>
+```
