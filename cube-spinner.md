@@ -1,0 +1,183 @@
+# Cube Spinner
+
+Interactive 3D cube with mouse control and color animations.
+
+```html
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Cube Spinner</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <style>
+        body { margin: 0; overflow: hidden; background: #000; }
+        canvas { display: block; }
+        #info {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            color: #00ff88;
+            font-family: 'Courier New', monospace;
+            font-size: 14px;
+            background: rgba(0, 20, 40, 0.8);
+            padding: 15px;
+            border-radius: 8px;
+            border: 2px solid #00ff88;
+        }
+    </style>
+</head>
+<body>
+    <div id="info">
+        🎲 <strong>CUBE SPINNER</strong><br>
+        <small>
+        • Mouse: Rotate camera<br>
+        • Scroll: Zoom<br>
+        • Click: Change color<br>
+        • Space: Auto-rotate
+        </small>
+    </div>
+
+    <script>
+        let scene, camera, renderer, cube;
+        let mouseX = 0, mouseY = 0;
+        let autoRotate = true;
+        let targetRotation = { x: 0, y: 0 };
+
+        function init() {
+            // Scene
+            scene = new THREE.Scene();
+            scene.fog = new THREE.FogExp2(0x000000, 0.05);
+
+            // Camera
+            camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+            camera.position.z = 5;
+
+            // Renderer
+            renderer = new THREE.WebGLRenderer({ antialias: true });
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            document.body.appendChild(renderer.domElement);
+
+            // Cube
+            const geometry = new THREE.BoxGeometry(2, 2, 2);
+            const material = new THREE.MeshPhongMaterial({
+                color: 0x00ff88,
+                emissive: 0x00ff88,
+                emissiveIntensity: 0.2,
+                shininess: 100,
+                specular: 0x00ffff
+            });
+            cube = new THREE.Mesh(geometry, material);
+            scene.add(cube);
+
+            // Wireframe
+            const wireframe = new THREE.LineSegments(
+                new THREE.EdgesGeometry(geometry),
+                new THREE.LineBasicMaterial({ color: 0x00ffff, linewidth: 2 })
+            );
+            cube.add(wireframe);
+
+            // Lights
+            const ambientLight = new THREE.AmbientLight(0x404040);
+            scene.add(ambientLight);
+
+            const pointLight = new THREE.PointLight(0x00ff88, 1, 100);
+            pointLight.position.set(5, 5, 5);
+            scene.add(pointLight);
+
+            const pointLight2 = new THREE.PointLight(0xff0088, 0.5, 100);
+            pointLight2.position.set(-5, -5, 5);
+            scene.add(pointLight2);
+
+            // Particles
+            createParticles();
+
+            // Events
+            document.addEventListener('mousemove', onMouseMove);
+            document.addEventListener('click', changeColor);
+            document.addEventListener('keydown', onKeyDown);
+            window.addEventListener('resize', onResize);
+            window.addEventListener('wheel', onWheel);
+
+            animate();
+        }
+
+        function createParticles() {
+            const particlesGeometry = new THREE.BufferGeometry();
+            const particlesCount = 500;
+            const posArray = new Float32Array(particlesCount * 3);
+
+            for (let i = 0; i < particlesCount * 3; i++) {
+                posArray[i] = (Math.random() - 0.5) * 20;
+            }
+
+            particlesGeometry.setAttribute('position', new THREE.BufferAttribute(posArray, 3));
+
+            const particlesMaterial = new THREE.PointsMaterial({
+                size: 0.05,
+                color: 0x00ff88,
+                transparent: true,
+                opacity: 0.8
+            });
+
+            const particlesMesh = new THREE.Points(particlesGeometry, particlesMaterial);
+            scene.add(particlesMesh);
+        }
+
+        function onMouseMove(event) {
+            if (!autoRotate) {
+                mouseX = (event.clientX / window.innerWidth) * 2 - 1;
+                mouseY = -(event.clientY / window.innerHeight) * 2 + 1;
+
+                targetRotation.x = mouseY * Math.PI;
+                targetRotation.y = mouseX * Math.PI;
+            }
+        }
+
+        function changeColor() {
+            const colors = [0x00ff88, 0xff0088, 0x0088ff, 0xff8800, 0x8800ff, 0xffff00];
+            const newColor = colors[Math.floor(Math.random() * colors.length)];
+            cube.material.color.setHex(newColor);
+            cube.material.emissive.setHex(newColor);
+        }
+
+        function onKeyDown(event) {
+            if (event.code === 'Space') {
+                autoRotate = !autoRotate;
+            }
+        }
+
+        function onWheel(event) {
+            camera.position.z += event.deltaY * 0.01;
+            camera.position.z = Math.max(2, Math.min(10, camera.position.z));
+        }
+
+        function onResize() {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        }
+
+        function animate() {
+            requestAnimationFrame(animate);
+
+            if (autoRotate) {
+                cube.rotation.x += 0.01;
+                cube.rotation.y += 0.01;
+            } else {
+                // Smooth rotation to target
+                cube.rotation.x += (targetRotation.x - cube.rotation.x) * 0.05;
+                cube.rotation.y += (targetRotation.y - cube.rotation.y) * 0.05;
+            }
+
+            // Animate scale
+            const scale = 1 + Math.sin(Date.now() * 0.001) * 0.1;
+            cube.scale.set(scale, scale, scale);
+
+            renderer.render(scene, camera);
+        }
+
+        init();
+    </script>
+</body>
+</html>
+```

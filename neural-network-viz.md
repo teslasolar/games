@@ -1,0 +1,383 @@
+# Neural Network Visualizer
+
+Real-time 3D visualization of neural network training.
+
+```html
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Neural Network Visualizer</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <style>
+        body { margin: 0; overflow: hidden; background: #0a0a0a; }
+        canvas { display: block; }
+        #info {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            color: #00ff88;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+            background: rgba(0, 20, 40, 0.9);
+            padding: 15px;
+            border-radius: 8px;
+            border: 2px solid #00ff88;
+            max-width: 300px;
+        }
+        .metric {
+            margin: 5px 0;
+            font-size: 11px;
+        }
+        .bar {
+            height: 8px;
+            background: rgba(0, 255, 136, 0.2);
+            border-radius: 4px;
+            overflow: hidden;
+            margin-top: 3px;
+        }
+        .bar-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #00ff88, #0088ff);
+            transition: width 0.3s;
+        }
+    </style>
+</head>
+<body>
+    <div id="info">
+        🧠 <strong>NEURAL NETWORK TRAINING</strong><br><br>
+        <div class="metric">
+            Epoch: <span id="epoch">0</span> / 100
+            <div class="bar"><div class="bar-fill" id="epoch-bar"></div></div>
+        </div>
+        <div class="metric">
+            Loss: <span id="loss">1.0000</span>
+            <div class="bar"><div class="bar-fill" id="loss-bar"></div></div>
+        </div>
+        <div class="metric">
+            Accuracy: <span id="accuracy">0.00%</span>
+            <div class="bar"><div class="bar-fill" id="accuracy-bar"></div></div>
+        </div>
+        <div class="metric">
+            Learning Rate: <span id="lr">0.001</span>
+        </div>
+        <br>
+        <small style="color: #88ff88;">
+        • Click nodes to activate<br>
+        • Space: Pause/Resume<br>
+        • R: Reset network
+        </small>
+    </div>
+
+    <script>
+        let scene, camera, renderer;
+        let network = { layers: [] };
+        let neurons = [];
+        let connections = [];
+        let trainingActive = true;
+        let epoch = 0;
+        let loss = 1.0;
+        let accuracy = 0;
+        let learningRate = 0.001;
+
+        const layerSizes = [8, 12, 12, 8, 4];
+
+        function init() {
+            scene = new THREE.Scene();
+            scene.background = new THREE.Color(0x0a0a0a);
+            scene.fog = new THREE.Fog(0x0a0a0a, 30, 60);
+
+            camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 100);
+            camera.position.set(0, 0, 25);
+
+            renderer = new THREE.WebGLRenderer({ antialias: true });
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            document.body.appendChild(renderer.domElement);
+
+            createNetwork();
+            createLighting();
+            setupEventListeners();
+
+            animate();
+        }
+
+        function createNetwork() {
+            const layerSpacing = 10;
+            const startX = -(layerSizes.length - 1) * layerSpacing / 2;
+
+            layerSizes.forEach((size, layerIndex) => {
+                const layer = [];
+                const x = startX + layerIndex * layerSpacing;
+                const neuronSpacing = 2;
+                const startY = -(size - 1) * neuronSpacing / 2;
+
+                for (let i = 0; i < size; i++) {
+                    const y = startY + i * neuronSpacing;
+
+                    // Neuron sphere
+                    const geometry = new THREE.SphereGeometry(0.3, 16, 16);
+                    const material = new THREE.MeshPhongMaterial({
+                        color: 0x00ff88,
+                        emissive: 0x00ff88,
+                        emissiveIntensity: 0.2,
+                        transparent: true,
+                        opacity: 0.8
+                    });
+
+                    const neuron = new THREE.Mesh(geometry, material);
+                    neuron.position.set(x, y, 0);
+                    neuron.userData = {
+                        layer: layerIndex,
+                        index: i,
+                        activation: 0,
+                        weight: Math.random(),
+                        bias: Math.random() - 0.5
+                    };
+
+                    scene.add(neuron);
+                    layer.push(neuron);
+                    neurons.push(neuron);
+
+                    // Create connections to previous layer
+                    if (layerIndex > 0) {
+                        const prevLayer = network.layers[layerIndex - 1];
+
+                        prevLayer.forEach(prevNeuron => {
+                            const points = [];
+                            points.push(prevNeuron.position);
+                            points.push(neuron.position);
+
+                            const geometry = new THREE.BufferGeometry().setFromPoints(points);
+                            const material = new THREE.LineBasicMaterial({
+                                color: 0x00ff88,
+                                transparent: true,
+                                opacity: 0.1
+                            });
+
+                            const connection = new THREE.Line(geometry, material);
+                            connection.userData = {
+                                from: prevNeuron,
+                                to: neuron,
+                                weight: Math.random() - 0.5
+                            };
+
+                            scene.add(connection);
+                            connections.push(connection);
+                        });
+                    }
+                }
+
+                network.layers.push(layer);
+            });
+        }
+
+        function createLighting() {
+            const ambientLight = new THREE.AmbientLight(0x404040, 0.5);
+            scene.add(ambientLight);
+
+            const pointLight1 = new THREE.PointLight(0x00ff88, 1, 50);
+            pointLight1.position.set(10, 10, 20);
+            scene.add(pointLight1);
+
+            const pointLight2 = new THREE.PointLight(0x0088ff, 0.5, 50);
+            pointLight2.position.set(-10, -10, 20);
+            scene.add(pointLight2);
+        }
+
+        function setupEventListeners() {
+            document.addEventListener('keydown', (e) => {
+                if (e.code === 'Space') {
+                    trainingActive = !trainingActive;
+                } else if (e.key.toLowerCase() === 'r') {
+                    resetNetwork();
+                }
+            });
+
+            document.addEventListener('click', (e) => {
+                const mouse = new THREE.Vector2(
+                    (e.clientX / window.innerWidth) * 2 - 1,
+                    -(e.clientY / window.innerHeight) * 2 + 1
+                );
+
+                const raycaster = new THREE.Raycaster();
+                raycaster.setFromCamera(mouse, camera);
+
+                const intersects = raycaster.intersectObjects(neurons);
+                if (intersects.length > 0) {
+                    const neuron = intersects[0].object;
+                    activateNeuron(neuron);
+                }
+            });
+
+            window.addEventListener('resize', onResize);
+        }
+
+        function activateNeuron(neuron) {
+            neuron.userData.activation = 1.0;
+
+            // Create activation pulse
+            const pulseGeometry = new THREE.SphereGeometry(0.3, 16, 16);
+            const pulseMaterial = new THREE.MeshBasicMaterial({
+                color: 0x00ffff,
+                transparent: true,
+                opacity: 0.8
+            });
+
+            const pulse = new THREE.Mesh(pulseGeometry, pulseMaterial);
+            pulse.position.copy(neuron.position);
+            scene.add(pulse);
+
+            let scale = 1;
+            const animatePulse = () => {
+                scale += 0.1;
+                pulse.scale.set(scale, scale, scale);
+                pulse.material.opacity = 0.8 / scale;
+
+                if (scale < 3) {
+                    requestAnimationFrame(animatePulse);
+                } else {
+                    scene.remove(pulse);
+                }
+            };
+
+            animatePulse();
+        }
+
+        function forwardPass() {
+            // Input layer random activation
+            network.layers[0].forEach(neuron => {
+                neuron.userData.activation = Math.random();
+            });
+
+            // Propagate through network
+            for (let l = 1; l < network.layers.length; l++) {
+                network.layers[l].forEach(neuron => {
+                    let sum = neuron.userData.bias;
+
+                    connections
+                        .filter(conn => conn.userData.to === neuron)
+                        .forEach(conn => {
+                            sum += conn.userData.from.userData.activation * conn.userData.weight;
+                        });
+
+                    // ReLU activation
+                    neuron.userData.activation = Math.max(0, sum);
+                });
+            }
+        }
+
+        function updateNetwork() {
+            if (!trainingActive) return;
+
+            // Run forward pass
+            forwardPass();
+
+            // Update visualizations
+            neurons.forEach(neuron => {
+                const activation = neuron.userData.activation;
+
+                // Update neuron color and size based on activation
+                const intensity = Math.min(1, activation);
+                neuron.material.emissiveIntensity = 0.2 + intensity * 0.8;
+                neuron.scale.setScalar(0.8 + intensity * 0.4);
+
+                // Color gradient based on activation
+                const color = new THREE.Color();
+                if (activation > 0.5) {
+                    color.setRGB(0, 1, activation - 0.5);
+                } else {
+                    color.setRGB(0, activation * 2, 0.5);
+                }
+                neuron.material.color = color;
+                neuron.material.emissive = color;
+
+                // Decay activation
+                neuron.userData.activation *= 0.95;
+            });
+
+            // Update connections
+            connections.forEach(conn => {
+                const activation = conn.userData.from.userData.activation;
+                const weight = Math.abs(conn.userData.weight);
+
+                conn.material.opacity = activation * weight * 0.5;
+
+                // Color based on weight
+                if (conn.userData.weight > 0) {
+                    conn.material.color.setRGB(0, 1, 0.5);
+                } else {
+                    conn.material.color.setRGB(1, 0, 0.5);
+                }
+
+                // Update weight (simulated training)
+                conn.userData.weight += (Math.random() - 0.5) * learningRate;
+                conn.userData.weight = Math.max(-1, Math.min(1, conn.userData.weight));
+            });
+
+            // Update training metrics
+            if (Math.random() < 0.05) {
+                epoch = Math.min(100, epoch + 1);
+                loss = Math.max(0.01, loss * 0.95);
+                accuracy = Math.min(99.9, accuracy + Math.random() * 2);
+                learningRate *= 0.99;
+
+                updateMetrics();
+            }
+        }
+
+        function updateMetrics() {
+            document.getElementById('epoch').textContent = epoch;
+            document.getElementById('loss').textContent = loss.toFixed(4);
+            document.getElementById('accuracy').textContent = accuracy.toFixed(2) + '%';
+            document.getElementById('lr').textContent = learningRate.toFixed(6);
+
+            document.getElementById('epoch-bar').style.width = (epoch / 100 * 100) + '%';
+            document.getElementById('loss-bar').style.width = ((1 - loss) * 100) + '%';
+            document.getElementById('accuracy-bar').style.width = accuracy + '%';
+        }
+
+        function resetNetwork() {
+            epoch = 0;
+            loss = 1.0;
+            accuracy = 0;
+            learningRate = 0.001;
+
+            neurons.forEach(neuron => {
+                neuron.userData.activation = 0;
+                neuron.userData.weight = Math.random();
+                neuron.userData.bias = Math.random() - 0.5;
+            });
+
+            connections.forEach(conn => {
+                conn.userData.weight = Math.random() - 0.5;
+            });
+
+            updateMetrics();
+        }
+
+        function onResize() {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        }
+
+        function animate() {
+            requestAnimationFrame(animate);
+
+            updateNetwork();
+
+            // Rotate camera
+            const time = Date.now() * 0.0001;
+            camera.position.x = Math.sin(time) * 25;
+            camera.position.z = Math.cos(time) * 25;
+            camera.lookAt(0, 0, 0);
+
+            renderer.render(scene, camera);
+        }
+
+        init();
+        updateMetrics();
+    </script>
+</body>
+</html>
+```
