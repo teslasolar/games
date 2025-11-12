@@ -1,0 +1,535 @@
+# Music Visualizer 3D
+
+Interactive audio-reactive 3D visualization with multiple visual modes.
+
+```html
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Music Visualizer 3D</title>
+    <style>
+        body {
+            margin: 0;
+            overflow: hidden;
+            font-family: 'Courier New', monospace;
+            background: #000;
+        }
+        #info {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            color: #00ff88;
+            background: rgba(0, 0, 0, 0.9);
+            padding: 15px;
+            border: 2px solid #00ff88;
+            border-radius: 8px;
+            font-size: 14px;
+            z-index: 100;
+        }
+        #controls {
+            position: absolute;
+            bottom: 10px;
+            left: 10px;
+            right: 10px;
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            justify-content: center;
+            z-index: 100;
+        }
+        .control-btn {
+            background: rgba(0, 255, 136, 0.2);
+            border: 2px solid #00ff88;
+            color: #00ff88;
+            padding: 12px 20px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+            transition: all 0.3s;
+        }
+        .control-btn:hover {
+            background: rgba(0, 255, 136, 0.4);
+            transform: translateY(-2px);
+        }
+        .control-btn.active {
+            background: rgba(0, 255, 136, 0.6);
+            border-width: 3px;
+        }
+        #fileInput {
+            display: none;
+        }
+        .hint {
+            font-size: 10px;
+            color: #88ff88;
+            margin-top: 5px;
+        }
+        #welcome {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            text-align: center;
+            color: #00ff88;
+            font-size: 18px;
+            background: rgba(0, 0, 0, 0.9);
+            padding: 40px;
+            border: 3px solid #00ff88;
+            border-radius: 15px;
+            z-index: 200;
+        }
+        #welcome.hidden {
+            display: none;
+        }
+        #loadBtn {
+            margin-top: 20px;
+            padding: 15px 40px;
+            font-size: 18px;
+            background: rgba(0, 255, 136, 0.3);
+            border: 3px solid #00ff88;
+            color: #00ff88;
+            border-radius: 10px;
+            cursor: pointer;
+            font-family: 'Courier New', monospace;
+            font-weight: bold;
+        }
+        #loadBtn:hover {
+            background: rgba(0, 255, 136, 0.5);
+        }
+    </style>
+</head>
+<body>
+    <div id="welcome">
+        <div style="font-size: 32px; margin-bottom: 20px;">🎵 MUSIC VISUALIZER</div>
+        <div style="margin: 15px 0;">Experience your music in 3D</div>
+        <button id="loadBtn">🎵 Load Music / Use Mic</button>
+        <div class="hint" style="margin-top: 15px;">Or click anywhere to start with generated tones</div>
+    </div>
+
+    <div id="info">
+        <div>🎵 MUSIC VISUALIZER</div>
+        <div class="hint">Mode: <span id="mode">Spectrum Bars</span></div>
+        <div class="hint">Click to toggle playback</div>
+        <div class="hint">1-6: Change visual mode</div>
+    </div>
+
+    <div id="controls">
+        <button class="control-btn active" data-mode="0">📊 Spectrum Bars</button>
+        <button class="control-btn" data-mode="1">🌊 Waveform</button>
+        <button class="control-btn" data-mode="2">⭕ Circular</button>
+        <button class="control-btn" data-mode="3">🔮 Particles</button>
+        <button class="control-btn" data-mode="4">🌀 Tunnel</button>
+        <button class="control-btn" data-mode="5">💠 Crystals</button>
+        <label class="control-btn" for="fileInput">📁 Load Audio</label>
+    </div>
+
+    <input type="file" id="fileInput" accept="audio/*">
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script>
+        // Audio setup
+        const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+        const analyser = audioContext.createAnalyser();
+        analyser.fftSize = 256;
+        const bufferLength = analyser.frequencyBinCount;
+        const dataArray = new Uint8Array(bufferLength);
+
+        let audioSource = null;
+        let audio = null;
+        let isPlaying = false;
+
+        // Three.js setup
+        const scene = new THREE.Scene();
+        scene.background = new THREE.Color(0x000000);
+
+        const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+        camera.position.z = 30;
+
+        const renderer = new THREE.WebGLRenderer({ antialias: true });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        document.body.appendChild(renderer.domElement);
+
+        // Visualization objects
+        let visualMode = 0;
+        const visualizers = [];
+
+        // Mode 0: Spectrum Bars
+        class SpectrumBars {
+            constructor() {
+                this.bars = [];
+                for (let i = 0; i < bufferLength; i++) {
+                    const geometry = new THREE.BoxGeometry(0.5, 1, 0.5);
+                    const hue = i / bufferLength;
+                    const material = new THREE.MeshBasicMaterial({ color: new THREE.Color().setHSL(hue, 1, 0.5) });
+                    const bar = new THREE.Mesh(geometry, material);
+                    const angle = (i / bufferLength) * Math.PI * 2;
+                    const radius = 15;
+                    bar.position.x = Math.cos(angle) * radius;
+                    bar.position.z = Math.sin(angle) * radius;
+                    scene.add(bar);
+                    this.bars.push(bar);
+                }
+            }
+
+            update(dataArray) {
+                this.bars.forEach((bar, i) => {
+                    const value = dataArray[i] / 255;
+                    bar.scale.y = value * 20 + 0.1;
+                    bar.material.color.setHSL(i / bufferLength, 1, value * 0.5 + 0.25);
+                });
+            }
+
+            hide() {
+                this.bars.forEach(bar => bar.visible = false);
+            }
+
+            show() {
+                this.bars.forEach(bar => bar.visible = true);
+            }
+        }
+
+        // Mode 1: Waveform
+        class Waveform {
+            constructor() {
+                const geometry = new THREE.BufferGeometry();
+                const positions = new Float32Array(bufferLength * 3);
+                geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+                const material = new THREE.LineBasicMaterial({ color: 0x00ffff, linewidth: 2 });
+                this.line = new THREE.Line(geometry, material);
+                scene.add(this.line);
+            }
+
+            update(dataArray) {
+                const positions = this.line.geometry.attributes.position.array;
+                for (let i = 0; i < bufferLength; i++) {
+                    const value = (dataArray[i] / 255) * 10;
+                    positions[i * 3] = (i / bufferLength) * 40 - 20;
+                    positions[i * 3 + 1] = value - 5;
+                    positions[i * 3 + 2] = Math.sin((i / bufferLength) * Math.PI * 4) * 2;
+                }
+                this.line.geometry.attributes.position.needsUpdate = true;
+                this.line.rotation.y += 0.01;
+            }
+
+            hide() {
+                this.line.visible = false;
+            }
+
+            show() {
+                this.line.visible = true;
+            }
+        }
+
+        // Mode 2: Circular
+        class Circular {
+            constructor() {
+                this.circles = [];
+                for (let i = 0; i < bufferLength; i++) {
+                    const geometry = new THREE.RingGeometry(0.1, 0.3, 16);
+                    const hue = i / bufferLength;
+                    const material = new THREE.MeshBasicMaterial({
+                        color: new THREE.Color().setHSL(hue, 1, 0.5),
+                        side: THREE.DoubleSide
+                    });
+                    const circle = new THREE.Mesh(geometry, material);
+                    const angle = (i / bufferLength) * Math.PI * 2;
+                    const radius = 10;
+                    circle.position.x = Math.cos(angle) * radius;
+                    circle.position.y = Math.sin(angle) * radius;
+                    scene.add(circle);
+                    this.circles.push(circle);
+                }
+            }
+
+            update(dataArray) {
+                this.circles.forEach((circle, i) => {
+                    const value = dataArray[i] / 255;
+                    const scale = value * 5 + 0.5;
+                    circle.scale.set(scale, scale, 1);
+                    circle.material.color.setHSL(i / bufferLength, 1, value * 0.5 + 0.25);
+                });
+            }
+
+            hide() {
+                this.circles.forEach(c => c.visible = false);
+            }
+
+            show() {
+                this.circles.forEach(c => c.visible = true);
+            }
+        }
+
+        // Mode 3: Particles
+        class Particles {
+            constructor() {
+                const geometry = new THREE.BufferGeometry();
+                const positions = new Float32Array(bufferLength * 3);
+                const colors = new Float32Array(bufferLength * 3);
+
+                for (let i = 0; i < bufferLength; i++) {
+                    positions[i * 3] = (Math.random() - 0.5) * 50;
+                    positions[i * 3 + 1] = (Math.random() - 0.5) * 50;
+                    positions[i * 3 + 2] = (Math.random() - 0.5) * 50;
+
+                    const color = new THREE.Color().setHSL(i / bufferLength, 1, 0.5);
+                    colors[i * 3] = color.r;
+                    colors[i * 3 + 1] = color.g;
+                    colors[i * 3 + 2] = color.b;
+                }
+
+                geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+                geometry.setAttribute('color', new THREE.BufferAttribute(colors, 3));
+
+                const material = new THREE.PointsMaterial({
+                    size: 0.5,
+                    vertexColors: true
+                });
+
+                this.particles = new THREE.Points(geometry, material);
+                scene.add(this.particles);
+            }
+
+            update(dataArray) {
+                const positions = this.particles.geometry.attributes.position.array;
+                for (let i = 0; i < bufferLength; i++) {
+                    const value = dataArray[i] / 255;
+                    const scale = value * 20 + 5;
+                    const angle = (i / bufferLength) * Math.PI * 2;
+                    positions[i * 3] = Math.cos(angle) * scale;
+                    positions[i * 3 + 1] = Math.sin(angle) * scale;
+                    positions[i * 3 + 2] = value * 10 - 5;
+                }
+                this.particles.geometry.attributes.position.needsUpdate = true;
+                this.particles.rotation.y += 0.005;
+                this.particles.rotation.x += 0.002;
+            }
+
+            hide() {
+                this.particles.visible = false;
+            }
+
+            show() {
+                this.particles.visible = true;
+            }
+        }
+
+        // Mode 4: Tunnel
+        class Tunnel {
+            constructor() {
+                this.rings = [];
+                for (let i = 0; i < 50; i++) {
+                    const geometry = new THREE.TorusGeometry(5, 0.3, 16, 100);
+                    const hue = i / 50;
+                    const material = new THREE.MeshBasicMaterial({
+                        color: new THREE.Color().setHSL(hue, 1, 0.5),
+                        wireframe: true
+                    });
+                    const ring = new THREE.Mesh(geometry, material);
+                    ring.position.z = -i * 2;
+                    scene.add(ring);
+                    this.rings.push(ring);
+                }
+            }
+
+            update(dataArray) {
+                const avgValue = dataArray.reduce((a, b) => a + b) / bufferLength / 255;
+                this.rings.forEach((ring, i) => {
+                    ring.position.z += 0.5 + avgValue * 2;
+                    if (ring.position.z > 10) {
+                        ring.position.z = -100;
+                    }
+                    const idx = Math.floor((i / this.rings.length) * bufferLength);
+                    const value = dataArray[idx] / 255;
+                    ring.scale.set(1 + value, 1 + value, 1);
+                    ring.material.color.setHSL(i / this.rings.length, 1, value * 0.5 + 0.25);
+                    ring.rotation.x += 0.01;
+                });
+            }
+
+            hide() {
+                this.rings.forEach(r => r.visible = false);
+            }
+
+            show() {
+                this.rings.forEach(r => r.visible = true);
+            }
+        }
+
+        // Mode 5: Crystals
+        class Crystals {
+            constructor() {
+                this.crystals = [];
+                for (let i = 0; i < bufferLength; i++) {
+                    const geometry = new THREE.OctahedronGeometry(0.5);
+                    const hue = i / bufferLength;
+                    const material = new THREE.MeshBasicMaterial({
+                        color: new THREE.Color().setHSL(hue, 1, 0.5),
+                        wireframe: true
+                    });
+                    const crystal = new THREE.Mesh(geometry, material);
+                    const angle = (i / bufferLength) * Math.PI * 2;
+                    const radius = 15;
+                    crystal.position.x = Math.cos(angle) * radius;
+                    crystal.position.y = Math.sin(angle * 2) * 5;
+                    crystal.position.z = Math.sin(angle) * radius;
+                    scene.add(crystal);
+                    this.crystals.push(crystal);
+                }
+            }
+
+            update(dataArray) {
+                this.crystals.forEach((crystal, i) => {
+                    const value = dataArray[i] / 255;
+                    crystal.scale.setScalar(value * 3 + 0.5);
+                    crystal.rotation.x += value * 0.1;
+                    crystal.rotation.y += value * 0.1;
+                    crystal.material.color.setHSL(i / bufferLength, 1, value * 0.5 + 0.25);
+                });
+            }
+
+            hide() {
+                this.crystals.forEach(c => c.visible = false);
+            }
+
+            show() {
+                this.crystals.forEach(c => c.visible = true);
+            }
+        }
+
+        // Initialize visualizers
+        visualizers.push(new SpectrumBars());
+        visualizers.push(new Waveform());
+        visualizers.push(new Circular());
+        visualizers.push(new Particles());
+        visualizers.push(new Tunnel());
+        visualizers.push(new Crystals());
+
+        // Hide all except first
+        for (let i = 1; i < visualizers.length; i++) {
+            visualizers[i].hide();
+        }
+
+        // Load audio file
+        document.getElementById('fileInput').addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if (file) {
+                const url = URL.createObjectURL(file);
+                loadAudio(url);
+            }
+        });
+
+        document.getElementById('loadBtn').addEventListener('click', () => {
+            document.getElementById('fileInput').click();
+        });
+
+        function loadAudio(url) {
+            if (audio) {
+                audio.pause();
+            }
+
+            audio = new Audio(url);
+            audioSource = audioContext.createMediaElementSource(audio);
+            audioSource.connect(analyser);
+            analyser.connect(audioContext.destination);
+
+            audio.play();
+            isPlaying = true;
+            document.getElementById('welcome').classList.add('hidden');
+        }
+
+        // Generate tone for demo
+        function generateTone() {
+            const oscillator = audioContext.createOscillator();
+            const gainNode = audioContext.createGain();
+
+            oscillator.connect(gainNode);
+            gainNode.connect(analyser);
+            analyser.connect(audioContext.destination);
+
+            oscillator.frequency.value = 440;
+            oscillator.type = 'sine';
+            gainNode.gain.value = 0.3;
+
+            oscillator.start();
+
+            // Modulate frequency
+            setInterval(() => {
+                oscillator.frequency.value = 200 + Math.random() * 600;
+            }, 500);
+
+            document.getElementById('welcome').classList.add('hidden');
+        }
+
+        // Click to start
+        renderer.domElement.addEventListener('click', () => {
+            if (!isPlaying && !audio) {
+                audioContext.resume();
+                generateTone();
+            } else if (audio) {
+                if (isPlaying) {
+                    audio.pause();
+                } else {
+                    audio.play();
+                }
+                isPlaying = !isPlaying;
+            }
+        });
+
+        // Mode switching
+        document.querySelectorAll('.control-btn[data-mode]').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const mode = parseInt(btn.dataset.mode);
+                switchMode(mode);
+                document.querySelectorAll('.control-btn[data-mode]').forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+            });
+        });
+
+        function switchMode(mode) {
+            visualizers[visualMode].hide();
+            visualMode = mode;
+            visualizers[visualMode].show();
+
+            const modeNames = ['Spectrum Bars', 'Waveform', 'Circular', 'Particles', 'Tunnel', 'Crystals'];
+            document.getElementById('mode').textContent = modeNames[mode];
+        }
+
+        // Keyboard shortcuts
+        document.addEventListener('keydown', (e) => {
+            const key = parseInt(e.key);
+            if (key >= 1 && key <= 6) {
+                switchMode(key - 1);
+                document.querySelectorAll('.control-btn[data-mode]').forEach((btn, idx) => {
+                    btn.classList.toggle('active', idx === key - 1);
+                });
+            }
+        });
+
+        // Animation loop
+        function animate() {
+            requestAnimationFrame(animate);
+
+            analyser.getByteFrequencyData(dataArray);
+
+            visualizers[visualMode].update(dataArray);
+
+            // Camera rotation
+            camera.position.x = Math.sin(Date.now() * 0.0001) * 35;
+            camera.position.z = Math.cos(Date.now() * 0.0001) * 35;
+            camera.lookAt(0, 0, 0);
+
+            renderer.render(scene, camera);
+        }
+
+        // Window resize
+        window.addEventListener('resize', () => {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        });
+
+        animate();
+    </script>
+</body>
+</html>
+```
