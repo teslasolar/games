@@ -1,7 +1,25 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="description" content="Konomi OS - Immersive 3D Desktop Operating System with neon cyberpunk aesthetics and AI integration">
+    <meta name="keywords" content="3D OS, virtual desktop, cyberpunk, neon interface, web-based OS">
+    <meta name="author" content="Konomi Systems">
+
+    <!-- Open Graph / Social Media -->
+    <meta property="og:type" content="website">
+    <meta property="og:title" content="Konomi OS - 3D Desktop Operating System">
+    <meta property="og:description" content="Experience the future of computing with a fully immersive 3D desktop environment featuring neon cyberpunk aesthetics">
+    <meta property="og:image" content="https://via.placeholder.com/1200x630/0a0a0a/00ff88?text=KONOMI+OS">
+    <meta property="og:url" content="https://konomi-os.example.com">
+
+    <!-- Twitter Card -->
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="Konomi OS - 3D Desktop">
+    <meta name="twitter:description" content="Immersive 3D desktop environment with neon cyberpunk aesthetics">
+    <meta name="twitter:image" content="https://via.placeholder.com/1200x630/0a0a0a/00ff88?text=KONOMI+OS">
+
     <title>Konomi OS - 3D Desktop</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     <style>
@@ -11,8 +29,75 @@
             color: #00ff88;
             font-family: 'Courier New', monospace;
             overflow: hidden;
+            touch-action: none;
         }
+
+        /* Boot Screen */
+        #boot-screen {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background: #000;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 10000;
+            transition: opacity 0.5s;
+        }
+        #boot-screen.hidden {
+            opacity: 0;
+            pointer-events: none;
+        }
+        .boot-logo {
+            font-size: 48px;
+            color: #00ff88;
+            text-shadow: 0 0 20px #00ff88, 0 0 40px #00ff88;
+            animation: pulse 2s infinite;
+            margin-bottom: 30px;
+        }
+        .boot-text {
+            font-size: 16px;
+            color: #00ff88;
+            margin: 5px 0;
+            opacity: 0;
+            animation: fadeIn 0.5s forwards;
+        }
+        .boot-text:nth-child(2) { animation-delay: 0.3s; }
+        .boot-text:nth-child(3) { animation-delay: 0.6s; }
+        .boot-text:nth-child(4) { animation-delay: 0.9s; }
+        .boot-text:nth-child(5) { animation-delay: 1.2s; }
+        .boot-progress {
+            width: 300px;
+            height: 4px;
+            background: #001122;
+            border: 1px solid #00ff88;
+            margin-top: 20px;
+            overflow: hidden;
+        }
+        .boot-progress-bar {
+            height: 100%;
+            background: linear-gradient(90deg, #00ff88, #00ffff);
+            width: 0%;
+            animation: loadProgress 2s forwards;
+            box-shadow: 0 0 10px #00ff88;
+        }
+
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+        }
+        @keyframes fadeIn {
+            to { opacity: 1; }
+        }
+        @keyframes loadProgress {
+            to { width: 100%; }
+        }
+
         #canvas { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; }
+
         .hud {
             position: absolute;
             top: 10px;
@@ -25,6 +110,24 @@
             backdrop-filter: blur(8px);
             z-index: 100;
         }
+
+        /* FPS Counter */
+        #fps-counter {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background: rgba(0, 20, 40, 0.95);
+            border: 2px solid #00ff88;
+            border-radius: 12px;
+            padding: 12px;
+            font-size: 14px;
+            backdrop-filter: blur(8px);
+            z-index: 100;
+            display: none;
+        }
+        #fps-counter.visible { display: block; }
+
+        /* Taskbar */
         .taskbar {
             position: fixed;
             bottom: 0;
@@ -37,9 +140,23 @@
             z-index: 90;
             display: flex;
             align-items: center;
-            justify-content: center;
-            gap: 10px;
+            justify-content: space-between;
             padding: 0 20px;
+        }
+        .taskbar-apps {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+        .taskbar-clock {
+            font-size: 14px;
+            color: #00ff88;
+            padding: 8px 16px;
+            background: rgba(0, 255, 136, 0.1);
+            border: 1px solid #00ff88;
+            border-radius: 8px;
+            min-width: 120px;
+            text-align: center;
         }
         .app-icon {
             width: 40px;
@@ -59,25 +176,326 @@
             transform: scale(1.1);
             box-shadow: 0 5px 20px rgba(0, 255, 136, 0.3);
         }
+
+        /* Settings Panel */
+        #settings-panel {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 90%;
+            max-width: 500px;
+            background: rgba(0, 20, 40, 0.98);
+            border: 2px solid #00ff88;
+            border-radius: 16px;
+            padding: 24px;
+            z-index: 200;
+            display: none;
+            backdrop-filter: blur(12px);
+        }
+        #settings-panel.visible { display: block; }
+        .settings-header {
+            font-size: 20px;
+            color: #00ff88;
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid #00ff88;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .settings-close {
+            cursor: pointer;
+            font-size: 24px;
+            color: #ff4444;
+            transition: all 0.3s;
+        }
+        .settings-close:hover {
+            color: #ff0000;
+            transform: scale(1.2);
+        }
+        .setting-item {
+            margin: 20px 0;
+        }
+        .setting-label {
+            color: #00ff88;
+            margin-bottom: 8px;
+            font-size: 12px;
+        }
+        .setting-control {
+            width: 100%;
+            padding: 10px;
+            background: rgba(0, 40, 80, 0.8);
+            border: 1px solid #00ff88;
+            border-radius: 8px;
+            color: #00ff88;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+        }
+        input[type="range"] {
+            width: 100%;
+            accent-color: #00ff88;
+        }
+        input[type="color"] {
+            width: 100%;
+            height: 40px;
+            cursor: pointer;
+            border: 2px solid #00ff88;
+            border-radius: 8px;
+        }
+        .setting-value {
+            display: inline-block;
+            margin-left: 10px;
+            color: #00ffff;
+        }
+
+        /* Help Overlay */
+        #help-overlay {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 90%;
+            max-width: 600px;
+            background: rgba(0, 20, 40, 0.98);
+            border: 2px solid #00ff88;
+            border-radius: 16px;
+            padding: 24px;
+            z-index: 300;
+            display: none;
+            backdrop-filter: blur(12px);
+        }
+        #help-overlay.visible { display: block; }
+        .help-header {
+            font-size: 24px;
+            color: #00ff88;
+            margin-bottom: 20px;
+            text-align: center;
+            text-shadow: 0 0 10px #00ff88;
+        }
+        .help-section {
+            margin: 15px 0;
+        }
+        .help-title {
+            color: #00ffff;
+            font-size: 14px;
+            margin-bottom: 8px;
+            font-weight: bold;
+        }
+        .help-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 8px;
+            margin: 4px 0;
+            background: rgba(0, 255, 136, 0.1);
+            border-radius: 6px;
+        }
+        .help-key {
+            color: #00ff88;
+            font-weight: bold;
+        }
+        .help-desc {
+            color: #aaffdd;
+        }
+        .help-close {
+            text-align: center;
+            margin-top: 20px;
+            padding: 10px;
+            background: rgba(0, 255, 136, 0.2);
+            border: 1px solid #00ff88;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        .help-close:hover {
+            background: rgba(0, 255, 136, 0.4);
+        }
+
+        /* Touch Controls */
+        .touch-controls {
+            position: fixed;
+            bottom: 80px;
+            right: 20px;
+            display: none;
+            z-index: 100;
+        }
+        @media (max-width: 768px) {
+            .touch-controls { display: flex; gap: 10px; flex-direction: column; }
+        }
+        .touch-btn {
+            width: 60px;
+            height: 60px;
+            background: rgba(0, 255, 136, 0.3);
+            border: 2px solid #00ff88;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+            color: #00ff88;
+            cursor: pointer;
+            transition: all 0.3s;
+            user-select: none;
+        }
+        .touch-btn:active {
+            background: rgba(0, 255, 136, 0.6);
+            transform: scale(0.95);
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .hud { font-size: 10px; padding: 8px; }
+            .taskbar { height: 50px; }
+            .app-icon { width: 35px; height: 35px; font-size: 16px; }
+            .taskbar-clock { font-size: 11px; min-width: 90px; }
+            .boot-logo { font-size: 32px; }
+        }
     </style>
 </head>
 <body>
+    <!-- Boot Screen -->
+    <div id="boot-screen">
+        <div class="boot-logo">🖥️ KONOMI OS</div>
+        <div class="boot-text">Initializing System...</div>
+        <div class="boot-text">Loading 3D Engine...</div>
+        <div class="boot-text">Mounting AI Stack...</div>
+        <div class="boot-text">System Ready</div>
+        <div class="boot-progress">
+            <div class="boot-progress-bar"></div>
+        </div>
+    </div>
+
     <canvas id="canvas"></canvas>
 
     <div class="hud">
-        <div style="color: #00ff88; font-weight: bold;">🖥️ KONOMI OS v4.0</div>
+        <div style="color: #00ff88; font-weight: bold;">🖥️ KONOMI OS v5.0</div>
         <div>System: <span style="color: #0f0;">ONLINE</span></div>
         <div>Windows: <span id="win-count">0</span></div>
-        <div>FPS: <span id="fps">60</span></div>
         <div>Camera: <span id="cam-pos">0, 0, 15</span></div>
     </div>
 
+    <!-- FPS Counter -->
+    <div id="fps-counter">
+        <div style="font-weight: bold; color: #00ff88;">FPS Monitor</div>
+        <div>FPS: <span id="fps">60</span></div>
+        <div>Frame Time: <span id="frame-time">16.67ms</span></div>
+    </div>
+
+    <!-- Settings Panel -->
+    <div id="settings-panel">
+        <div class="settings-header">
+            <span>⚙️ System Settings</span>
+            <span class="settings-close" onclick="OS.toggleSettings()">×</span>
+        </div>
+
+        <div class="setting-item">
+            <div class="setting-label">Desktop Background</div>
+            <select id="bg-select" class="setting-control" onchange="OS.changeBackground(this.value)">
+                <option value="default">Cyberpunk Gradient</option>
+                <option value="dark">Dark Void</option>
+                <option value="matrix">Matrix Green</option>
+                <option value="sunset">Neon Sunset</option>
+            </select>
+        </div>
+
+        <div class="setting-item">
+            <div class="setting-label">Window Transparency <span class="setting-value" id="transparency-value">90%</span></div>
+            <input type="range" id="transparency-slider" min="0" max="100" value="90"
+                   oninput="OS.changeTransparency(this.value)" class="setting-control">
+        </div>
+
+        <div class="setting-item">
+            <div class="setting-label">Theme Color</div>
+            <input type="color" id="theme-color" value="#00ff88"
+                   onchange="OS.changeThemeColor(this.value)" class="setting-control">
+        </div>
+
+        <div class="setting-item">
+            <div class="setting-label">Particle Density <span class="setting-value" id="particle-value">200</span></div>
+            <input type="range" id="particle-slider" min="50" max="500" value="200" step="50"
+                   oninput="OS.changeParticleDensity(this.value)" class="setting-control">
+        </div>
+    </div>
+
+    <!-- Help Overlay -->
+    <div id="help-overlay">
+        <div class="help-header">⌨️ Keyboard Shortcuts</div>
+
+        <div class="help-section">
+            <div class="help-title">Navigation</div>
+            <div class="help-item">
+                <span class="help-key">Click + Drag</span>
+                <span class="help-desc">Move Camera</span>
+            </div>
+            <div class="help-item">
+                <span class="help-key">Mouse Wheel</span>
+                <span class="help-desc">Zoom In/Out</span>
+            </div>
+        </div>
+
+        <div class="help-section">
+            <div class="help-title">Shortcuts</div>
+            <div class="help-item">
+                <span class="help-key">H</span>
+                <span class="help-desc">Toggle Help</span>
+            </div>
+            <div class="help-item">
+                <span class="help-key">F</span>
+                <span class="help-desc">Toggle FPS Counter</span>
+            </div>
+            <div class="help-item">
+                <span class="help-key">Esc</span>
+                <span class="help-desc">Close Panels</span>
+            </div>
+            <div class="help-item">
+                <span class="help-key">1-5</span>
+                <span class="help-desc">Quick Launch Apps</span>
+            </div>
+        </div>
+
+        <div class="help-section">
+            <div class="help-title">Applications</div>
+            <div class="help-item">
+                <span class="help-key">💻 Terminal</span>
+                <span class="help-desc">System Console</span>
+            </div>
+            <div class="help-item">
+                <span class="help-key">📁 Files</span>
+                <span class="help-desc">File Manager</span>
+            </div>
+            <div class="help-item">
+                <span class="help-key">🌐 Browser</span>
+                <span class="help-desc">Web Browser</span>
+            </div>
+            <div class="help-item">
+                <span class="help-key">🧠 AI Control</span>
+                <span class="help-desc">AI Assistant</span>
+            </div>
+            <div class="help-item">
+                <span class="help-key">⚙️ Settings</span>
+                <span class="help-desc">System Settings</span>
+            </div>
+        </div>
+
+        <div class="help-close" onclick="OS.toggleHelp()">Close (H or Esc)</div>
+    </div>
+
     <div class="taskbar">
-        <div class="app-icon" onclick="OS.createWindow('terminal')" title="Terminal">💻</div>
-        <div class="app-icon" onclick="OS.createWindow('files')" title="Files">📁</div>
-        <div class="app-icon" onclick="OS.createWindow('browser')" title="Browser">🌐</div>
-        <div class="app-icon" onclick="OS.createWindow('ai')" title="AI Control">🧠</div>
-        <div class="app-icon" onclick="OS.createWindow('settings')" title="Settings">⚙️</div>
+        <div class="taskbar-apps">
+            <div class="app-icon" onclick="OS.createWindow('terminal')" title="Terminal (1)">💻</div>
+            <div class="app-icon" onclick="OS.createWindow('files')" title="Files (2)">📁</div>
+            <div class="app-icon" onclick="OS.createWindow('browser')" title="Browser (3)">🌐</div>
+            <div class="app-icon" onclick="OS.createWindow('ai')" title="AI Control (4)">🧠</div>
+            <div class="app-icon" onclick="OS.toggleSettings()" title="Settings (5)">⚙️</div>
+        </div>
+        <div class="taskbar-clock" id="clock">00:00:00</div>
+    </div>
+
+    <!-- Touch Controls for Mobile -->
+    <div class="touch-controls">
+        <div class="touch-btn" id="zoom-in" title="Zoom In">+</div>
+        <div class="touch-btn" id="zoom-out" title="Zoom Out">−</div>
+        <div class="touch-btn" onclick="OS.toggleHelp()" title="Help">?</div>
     </div>
 
     <script>
@@ -88,8 +506,26 @@
             windows: [],
             mouseDown: false,
             mouse: { x: 0, y: 0 },
+            lastFrameTime: performance.now(),
+            frameCount: 0,
+            fpsArray: [],
+            settings: {
+                windowOpacity: 0.9,
+                themeColor: '#00ff88',
+                background: 'default',
+                particleCount: 200
+            },
+            touchStart: { x: 0, y: 0 },
 
             init() {
+                // Boot sequence
+                setTimeout(() => {
+                    document.getElementById('boot-screen').classList.add('hidden');
+                    setTimeout(() => {
+                        document.getElementById('boot-screen').style.display = 'none';
+                    }, 500);
+                }, 2500);
+
                 this.scene = new THREE.Scene();
                 this.camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
                 this.renderer = new THREE.WebGLRenderer({ canvas: document.getElementById('canvas'), antialias: true, alpha: true });
@@ -119,6 +555,17 @@
                 this.createParticles();
 
                 // Events
+                this.setupEventListeners();
+
+                // Update clock
+                this.updateClock();
+                setInterval(() => this.updateClock(), 1000);
+
+                this.animate();
+            },
+
+            setupEventListeners() {
+                // Mouse events
                 document.addEventListener('mousedown', (e) => this.mouseDown = true);
                 document.addEventListener('mouseup', (e) => this.mouseDown = false);
                 document.addEventListener('mousemove', (e) => {
@@ -127,17 +574,87 @@
                         this.camera.position.y -= (e.movementY * 0.008);
                     }
                 });
-                window.addEventListener('resize', () => this.onResize());
 
-                this.animate();
+                // Mouse wheel for zoom
+                document.addEventListener('wheel', (e) => {
+                    e.preventDefault();
+                    this.camera.position.z += e.deltaY * 0.01;
+                    this.camera.position.z = Math.max(5, Math.min(30, this.camera.position.z));
+                }, { passive: false });
+
+                // Touch events for mobile
+                const canvas = document.getElementById('canvas');
+                canvas.addEventListener('touchstart', (e) => {
+                    if (e.touches.length === 1) {
+                        this.touchStart.x = e.touches[0].clientX;
+                        this.touchStart.y = e.touches[0].clientY;
+                        this.mouseDown = true;
+                    }
+                }, { passive: true });
+
+                canvas.addEventListener('touchmove', (e) => {
+                    if (e.touches.length === 1 && this.mouseDown) {
+                        const deltaX = e.touches[0].clientX - this.touchStart.x;
+                        const deltaY = e.touches[0].clientY - this.touchStart.y;
+                        this.camera.position.x += deltaX * 0.01;
+                        this.camera.position.y -= deltaY * 0.01;
+                        this.touchStart.x = e.touches[0].clientX;
+                        this.touchStart.y = e.touches[0].clientY;
+                    }
+                }, { passive: true });
+
+                canvas.addEventListener('touchend', () => {
+                    this.mouseDown = false;
+                }, { passive: true });
+
+                // Touch zoom buttons
+                document.getElementById('zoom-in').addEventListener('touchstart', (e) => {
+                    e.preventDefault();
+                    this.camera.position.z -= 0.5;
+                    this.camera.position.z = Math.max(5, this.camera.position.z);
+                });
+
+                document.getElementById('zoom-out').addEventListener('touchstart', (e) => {
+                    e.preventDefault();
+                    this.camera.position.z += 0.5;
+                    this.camera.position.z = Math.min(30, this.camera.position.z);
+                });
+
+                // Keyboard shortcuts
+                document.addEventListener('keydown', (e) => {
+                    if (e.key === 'h' || e.key === 'H') {
+                        this.toggleHelp();
+                    } else if (e.key === 'f' || e.key === 'F') {
+                        this.toggleFPS();
+                    } else if (e.key === 'Escape') {
+                        this.closeAllPanels();
+                    } else if (e.key >= '1' && e.key <= '5') {
+                        const apps = ['terminal', 'files', 'browser', 'ai', 'settings'];
+                        const index = parseInt(e.key) - 1;
+                        if (index === 4) {
+                            this.toggleSettings();
+                        } else {
+                            this.createWindow(apps[index]);
+                        }
+                    }
+                });
+
+                window.addEventListener('resize', () => this.onResize());
             },
 
             createParticles() {
-                const geometry = new THREE.BufferGeometry();
-                const positions = new Float32Array(200 * 3);
-                const colors = new Float32Array(200 * 3);
+                // Remove old particles if they exist
+                const oldParticles = this.scene.children.find(child => child.type === 'Points');
+                if (oldParticles) {
+                    this.scene.remove(oldParticles);
+                }
 
-                for (let i = 0; i < 200; i++) {
+                const geometry = new THREE.BufferGeometry();
+                const count = this.settings.particleCount;
+                const positions = new Float32Array(count * 3);
+                const colors = new Float32Array(count * 3);
+
+                for (let i = 0; i < count; i++) {
                     positions[i * 3] = (Math.random() - 0.5) * 50;
                     positions[i * 3 + 1] = (Math.random() - 0.5) * 30;
                     positions[i * 3 + 2] = (Math.random() - 0.5) * 50;
@@ -173,13 +690,18 @@
 
                 // Window frame
                 const group = new THREE.Group();
+                group.userData = { type, minimized: false, maximized: false };
 
                 const frameGeo = new THREE.BoxGeometry(6, 4, 0.1);
-                const frameMat = new THREE.MeshPhongMaterial({ color: 0x001122, transparent: true, opacity: 0.9 });
+                const frameMat = new THREE.MeshPhongMaterial({
+                    color: 0x001122,
+                    transparent: true,
+                    opacity: this.settings.windowOpacity
+                });
                 const frame = new THREE.Mesh(frameGeo, frameMat);
                 group.add(frame);
 
-                // Window content
+                // Window content with controls
                 const canvas = document.createElement('canvas');
                 canvas.width = 600;
                 canvas.height = 400;
@@ -196,12 +718,33 @@
                 ctx.font = 'bold 20px Courier New';
                 ctx.fillText(`${windowData.icon} ${windowData.name}`, 20, 28);
 
+                // Window controls (minimize, maximize, close)
+                ctx.fillStyle = '#ffcc00';
+                ctx.fillRect(520, 10, 20, 20);
+                ctx.fillStyle = '#00ff00';
+                ctx.fillRect(545, 10, 20, 20);
+                ctx.fillStyle = '#ff4444';
+                ctx.fillRect(570, 10, 20, 20);
+
+                // Control symbols
+                ctx.fillStyle = '#000';
+                ctx.font = 'bold 16px Courier New';
+                ctx.fillText('−', 525, 26);
+                ctx.fillText('□', 549, 26);
+                ctx.fillText('×', 575, 26);
+
                 // Content
                 ctx.fillStyle = `#${windowData.color.toString(16).padStart(6, '0')}`;
                 ctx.font = '16px Courier New';
                 ctx.fillText(`${windowData.name} Application`, 20, 80);
                 ctx.fillText('• Ready for interaction', 20, 120);
                 ctx.fillText('• System integration active', 20, 150);
+                ctx.fillText('• AI stack online', 20, 180);
+
+                ctx.fillStyle = '#00ffff';
+                ctx.font = '12px Courier New';
+                ctx.fillText('Drag window to reposition', 20, 350);
+                ctx.fillText('Use window controls to minimize/maximize/close', 20, 370);
 
                 const texture = new THREE.CanvasTexture(canvas);
                 const contentGeo = new THREE.PlaneGeometry(6, 4);
@@ -236,6 +779,79 @@
                     `${Math.round(this.camera.position.x)}, ${Math.round(this.camera.position.y)}, ${Math.round(this.camera.position.z)}`;
             },
 
+            updateClock() {
+                const now = new Date();
+                const hours = String(now.getHours()).padStart(2, '0');
+                const minutes = String(now.getMinutes()).padStart(2, '0');
+                const seconds = String(now.getSeconds()).padStart(2, '0');
+                document.getElementById('clock').textContent = `${hours}:${minutes}:${seconds}`;
+            },
+
+            toggleFPS() {
+                const counter = document.getElementById('fps-counter');
+                counter.classList.toggle('visible');
+            },
+
+            toggleHelp() {
+                const overlay = document.getElementById('help-overlay');
+                overlay.classList.toggle('visible');
+            },
+
+            toggleSettings() {
+                const panel = document.getElementById('settings-panel');
+                panel.classList.toggle('visible');
+            },
+
+            closeAllPanels() {
+                document.getElementById('help-overlay').classList.remove('visible');
+                document.getElementById('settings-panel').classList.remove('visible');
+            },
+
+            changeBackground(value) {
+                this.settings.background = value;
+                const backgrounds = {
+                    default: 'linear-gradient(135deg, #0a0a0a, #1a1a2e, #0f3460)',
+                    dark: 'linear-gradient(135deg, #000000, #0a0a0a, #050505)',
+                    matrix: 'linear-gradient(135deg, #001100, #003300, #001a00)',
+                    sunset: 'linear-gradient(135deg, #1a0a2e, #3d1e4f, #d4145a)'
+                };
+                document.body.style.background = backgrounds[value];
+            },
+
+            changeTransparency(value) {
+                this.settings.windowOpacity = value / 100;
+                document.getElementById('transparency-value').textContent = `${value}%`;
+
+                // Update all existing windows
+                this.windows.forEach(win => {
+                    const frame = win.children.find(child => child.type === 'Mesh' && child.geometry.type === 'BoxGeometry');
+                    if (frame) {
+                        frame.material.opacity = this.settings.windowOpacity;
+                    }
+                });
+            },
+
+            changeThemeColor(color) {
+                this.settings.themeColor = color;
+                // Update CSS variables
+                document.documentElement.style.setProperty('--theme-color', color);
+
+                // Update border colors
+                const elements = document.querySelectorAll('.hud, #fps-counter, .taskbar, .app-icon, #settings-panel, #help-overlay');
+                elements.forEach(el => {
+                    if (el.style.borderColor || el.style.borderTopColor) {
+                        el.style.borderColor = color;
+                        el.style.borderTopColor = color;
+                    }
+                });
+            },
+
+            changeParticleDensity(value) {
+                this.settings.particleCount = parseInt(value);
+                document.getElementById('particle-value').textContent = value;
+                this.createParticles();
+            },
+
             onResize() {
                 this.camera.aspect = window.innerWidth / window.innerHeight;
                 this.camera.updateProjectionMatrix();
@@ -245,17 +861,28 @@
             animate() {
                 requestAnimationFrame(() => this.animate());
 
+                // Calculate FPS
+                const now = performance.now();
+                const delta = now - this.lastFrameTime;
+                this.lastFrameTime = now;
+
+                this.fpsArray.push(1000 / delta);
+                if (this.fpsArray.length > 60) this.fpsArray.shift();
+
+                const avgFps = Math.round(this.fpsArray.reduce((a, b) => a + b, 0) / this.fpsArray.length);
+                document.getElementById('fps').textContent = avgFps;
+                document.getElementById('frame-time').textContent = delta.toFixed(2) + 'ms';
+
                 // Animate windows
                 this.windows.forEach((win, i) => {
-                    const time = Date.now() * 0.001;
-                    win.position.y += Math.sin(time + i) * 0.001;
-                    win.rotation.z = Math.sin(time * 0.5 + i) * 0.02;
+                    if (!win.userData.minimized) {
+                        const time = Date.now() * 0.001;
+                        win.position.y += Math.sin(time + i) * 0.001;
+                        win.rotation.z = Math.sin(time * 0.5 + i) * 0.02;
+                    }
                 });
 
-                // FPS
-                const fps = Math.round(1000 / 16.67);
-                document.getElementById('fps').textContent = fps;
-
+                this.updateHUD();
                 this.renderer.render(this.scene, this.camera);
             }
         };

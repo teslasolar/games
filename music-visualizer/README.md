@@ -1,6 +1,6 @@
 # 🎵 Music Visualizer
 
-Interactive audio-reactive 3D visualization with multiple visual modes.
+Interactive audio-reactive 3D visualization with multiple visual modes, microphone input, pause controls, FPS counter, settings panel, and keyboard shortcuts.
 
 ## Database Schema
 

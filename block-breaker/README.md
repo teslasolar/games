@@ -1,6 +1,6 @@
 # 🧱 Block Breaker 3D
 
-Classic block breaking game reimagined in 3D space.
+Classic block breaking game reimagined in 3D space with neon cyberpunk aesthetics.
 
 ## Database Schema
 

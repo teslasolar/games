@@ -1,6 +1,6 @@
 # 🏙️ City Builder
 
-Build and manage your own 3D city with various building types and resource management.
+Build and manage your own 3D cyberpunk city with resource management, multiple building types, and strategic gameplay.
 
 ## Database Schema
 

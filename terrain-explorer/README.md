@@ -1,6 +1,6 @@
 # 🏔️ Terrain Explorer
 
-Navigate procedurally generated 3D terrain with flying camera.
+Navigate procedurally generated 3D terrain with flying camera in a neon cyberpunk world.
 
 ## Database Schema
 

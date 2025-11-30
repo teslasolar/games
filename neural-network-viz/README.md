@@ -1,6 +1,6 @@
 # 🧠 Neural Network
 
-Real-time 3D visualization of neural network training.
+Real-time 3D visualization of neural network training with advanced controls and settings.
 
 ## Database Schema
 
@@ -151,9 +151,6 @@ Open `index.html` in a modern web browser, or navigate to:
 
 | Input | Action |
 |-------|--------|
-| Click nodes to activate<br>
-        • Space | Pause/Resume |
-| R | Reset network |
 
 
 ## Dependencies

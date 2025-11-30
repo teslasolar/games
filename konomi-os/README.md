@@ -153,6 +153,12 @@ Open `index.html` in a modern web browser, or navigate to:
 |-------|--------|
 | Ready for interaction', 20, 120);
                 ctx.fillText('• System integration active', 20, 150);
+                ctx.fillText('• AI stack online', 20, 180);
+
+                ctx.fillStyle = '#00ffff';
+                ctx.font = '12px Courier New';
+                ctx.fillText('Drag window to reposition', 20, 350);
+                ctx.fillText('Use window controls to minimize/maximize/close', 20, 370);
 
                 const texture = new THREE.CanvasTexture(canvas);
                 const contentGeo = new THREE.PlaneGeometry(6, 4);

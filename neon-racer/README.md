@@ -1,6 +1,6 @@
 # 🏎️ Neon Racer
 
-High-speed futuristic racing game with neon aesthetics and procedural tracks.
+High-speed futuristic racing game with neon aesthetics and procedural tracks. Enhanced with loading screen, pause/resume, FPS counter, settings panel, mobile controls, and best lap tracking.
 
 ## Database Schema
 

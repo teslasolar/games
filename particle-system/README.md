@@ -1,6 +1,6 @@
 # ✨ Particle Storm
 
-Interactive particle system with physics and mouse attraction.
+Interactive particle system with physics, multiple modes, and comprehensive controls. Features include pause/resume, FPS counter, settings panel, mobile touch support, and keyboard shortcuts help overlay.
 
 ## Database Schema
 
@@ -152,9 +152,10 @@ Open `index.html` in a modern web browser, or navigate to:
 | Input | Action |
 |-------|--------|
 | Move mouse | Attract particles |
-| Click | Explosion |
+| Click/Touch | Explosion |
 | 1-5 | Change modes |
 | Space | Reset |
+| H | Help |
 
 
 ## Dependencies

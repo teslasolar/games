@@ -1,55 +1,590 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-    <title>Maze Runner 3D</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="description" content="Maze Runner 3D - An immersive first-person maze exploration game with procedurally generated mazes and cyberpunk aesthetics">
+    <meta name="keywords" content="maze game, 3D game, WebGL, Three.js, procedural generation, cyberpunk">
+    <meta name="author" content="Maze Runner 3D">
+
+    <!-- Open Graph / Facebook -->
+    <meta property="og:type" content="website">
+    <meta property="og:title" content="Maze Runner 3D - Cyberpunk Maze Game">
+    <meta property="og:description" content="Navigate through procedurally generated 3D mazes in this immersive first-person cyberpunk adventure">
+    <meta property="og:image" content="https://via.placeholder.com/1200x630/000000/00ff88?text=Maze+Runner+3D">
+
+    <!-- Twitter -->
+    <meta property="twitter:card" content="summary_large_image">
+    <meta property="twitter:title" content="Maze Runner 3D - Cyberpunk Maze Game">
+    <meta property="twitter:description" content="Navigate through procedurally generated 3D mazes in this immersive first-person cyberpunk adventure">
+    <meta property="twitter:image" content="https://via.placeholder.com/1200x630/000000/00ff88?text=Maze+Runner+3D">
+
+    <title>Maze Runner 3D - Cyberpunk Maze Game</title>
     <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
         body {
             margin: 0;
             overflow: hidden;
             font-family: 'Courier New', monospace;
             background: #000;
+            touch-action: none;
         }
-        #info {
-            position: absolute;
-            top: 10px;
-            left: 10px;
+
+        /* Loading Screen */
+        #loading-screen {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: #000;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 10000;
             color: #00ff88;
-            background: rgba(0, 0, 0, 0.8);
+        }
+
+        #loading-screen h1 {
+            font-size: 48px;
+            margin-bottom: 30px;
+            text-shadow: 0 0 20px #00ff88;
+        }
+
+        .spinner {
+            border: 4px solid rgba(0, 255, 136, 0.1);
+            border-top: 4px solid #00ff88;
+            border-radius: 50%;
+            width: 60px;
+            height: 60px;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .loading-text {
+            margin-top: 20px;
+            font-size: 16px;
+            color: #00ff88;
+        }
+
+        /* UI Panels */
+        .panel {
+            position: absolute;
+            color: #00ff88;
+            background: rgba(0, 0, 0, 0.9);
             padding: 15px;
             border: 2px solid #00ff88;
             border-radius: 8px;
             font-size: 14px;
             z-index: 100;
+            box-shadow: 0 0 20px rgba(0, 255, 136, 0.5);
         }
+
+        #info {
+            top: 10px;
+            left: 10px;
+            max-width: 300px;
+        }
+
+        #fps-counter {
+            top: 10px;
+            right: 10px;
+            display: none;
+            padding: 10px 15px;
+            font-size: 16px;
+            font-weight: bold;
+        }
+
+        #timer {
+            top: 60px;
+            left: 10px;
+            padding: 10px 15px;
+        }
+
         #minimap {
             position: absolute;
-            top: 10px;
+            top: 120px;
             right: 10px;
             width: 200px;
             height: 200px;
             border: 2px solid #00ff88;
-            background: rgba(0, 0, 0, 0.8);
+            background: rgba(0, 0, 0, 0.9);
             z-index: 100;
+            box-shadow: 0 0 20px rgba(0, 255, 136, 0.5);
         }
+
         .key-hint {
             font-size: 11px;
             color: #88ff88;
             margin-top: 5px;
         }
+
+        .title {
+            font-size: 20px;
+            font-weight: bold;
+            margin-bottom: 10px;
+            text-shadow: 0 0 10px #00ff88;
+        }
+
+        /* Settings Panel */
+        #settings-panel {
+            display: none;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 400px;
+            max-width: 90vw;
+            max-height: 90vh;
+            overflow-y: auto;
+        }
+
+        #settings-panel.active {
+            display: block;
+        }
+
+        .setting-group {
+            margin: 15px 0;
+        }
+
+        .setting-label {
+            display: block;
+            margin-bottom: 8px;
+            color: #00ff88;
+            font-weight: bold;
+        }
+
+        input[type="range"] {
+            width: 100%;
+            height: 6px;
+            background: #003322;
+            outline: none;
+            border-radius: 3px;
+        }
+
+        input[type="range"]::-webkit-slider-thumb {
+            appearance: none;
+            width: 16px;
+            height: 16px;
+            background: #00ff88;
+            cursor: pointer;
+            border-radius: 50%;
+            box-shadow: 0 0 10px #00ff88;
+        }
+
+        input[type="range"]::-moz-range-thumb {
+            width: 16px;
+            height: 16px;
+            background: #00ff88;
+            cursor: pointer;
+            border-radius: 50%;
+            box-shadow: 0 0 10px #00ff88;
+        }
+
+        .setting-value {
+            color: #88ff88;
+            margin-left: 10px;
+        }
+
+        select {
+            width: 100%;
+            padding: 8px;
+            background: #003322;
+            color: #00ff88;
+            border: 1px solid #00ff88;
+            border-radius: 4px;
+            font-family: 'Courier New', monospace;
+            font-size: 14px;
+        }
+
+        button {
+            background: #003322;
+            color: #00ff88;
+            border: 2px solid #00ff88;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-family: 'Courier New', monospace;
+            font-size: 14px;
+            margin-top: 15px;
+            width: 100%;
+            transition: all 0.3s;
+        }
+
+        button:hover {
+            background: #00ff88;
+            color: #000;
+            box-shadow: 0 0 20px #00ff88;
+        }
+
+        /* Help Overlay */
+        #help-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.95);
+            z-index: 9999;
+            overflow-y: auto;
+        }
+
+        #help-overlay.active {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .help-content {
+            max-width: 600px;
+            padding: 30px;
+            color: #00ff88;
+        }
+
+        .help-section {
+            margin: 20px 0;
+        }
+
+        .help-section h2 {
+            color: #00ff88;
+            margin-bottom: 10px;
+            text-shadow: 0 0 10px #00ff88;
+        }
+
+        .shortcut {
+            display: flex;
+            justify-content: space-between;
+            padding: 8px 0;
+            border-bottom: 1px solid #003322;
+        }
+
+        .key {
+            background: #003322;
+            padding: 4px 12px;
+            border-radius: 4px;
+            border: 1px solid #00ff88;
+            font-weight: bold;
+        }
+
+        /* Pause Overlay */
+        #pause-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.8);
+            z-index: 9998;
+            justify-content: center;
+            align-items: center;
+        }
+
+        #pause-overlay.active {
+            display: flex;
+        }
+
+        .pause-text {
+            font-size: 48px;
+            color: #00ff88;
+            text-shadow: 0 0 30px #00ff88;
+            animation: pulse 2s ease-in-out infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+
+        /* Mobile Controls */
+        #mobile-controls {
+            display: none;
+            position: fixed;
+            bottom: 20px;
+            left: 0;
+            right: 0;
+            z-index: 1000;
+            pointer-events: none;
+        }
+
+        @media (max-width: 768px) {
+            #mobile-controls {
+                display: block;
+            }
+        }
+
+        .joystick-container {
+            position: absolute;
+            bottom: 20px;
+            left: 20px;
+            width: 120px;
+            height: 120px;
+            pointer-events: auto;
+        }
+
+        .joystick-base {
+            width: 120px;
+            height: 120px;
+            border-radius: 50%;
+            background: rgba(0, 255, 136, 0.2);
+            border: 2px solid #00ff88;
+            position: relative;
+        }
+
+        .joystick-stick {
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            background: #00ff88;
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            box-shadow: 0 0 20px #00ff88;
+        }
+
+        .mobile-button {
+            position: absolute;
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            background: rgba(0, 255, 136, 0.3);
+            border: 2px solid #00ff88;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            color: #00ff88;
+            font-size: 12px;
+            pointer-events: auto;
+            user-select: none;
+            box-shadow: 0 0 15px rgba(0, 255, 136, 0.5);
+        }
+
+        .mobile-button:active {
+            background: rgba(0, 255, 136, 0.6);
+        }
+
+        #mobile-new-maze {
+            bottom: 20px;
+            right: 20px;
+        }
+
+        #mobile-pause {
+            bottom: 90px;
+            right: 20px;
+        }
+
+        /* Stats */
+        .stat {
+            margin: 5px 0;
+            color: #88ff88;
+        }
+
+        .stat-value {
+            color: #00ff88;
+            font-weight: bold;
+        }
+
+        /* Scrollbar */
+        ::-webkit-scrollbar {
+            width: 10px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: #001111;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: #00ff88;
+            border-radius: 5px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: #00dd77;
+        }
     </style>
 </head>
 <body>
-    <div id="info">
-        <div>🧭 MAZE RUNNER</div>
+    <!-- Loading Screen -->
+    <div id="loading-screen">
+        <h1>MAZE RUNNER 3D</h1>
+        <div class="spinner"></div>
+        <div class="loading-text">Initializing...</div>
+    </div>
+
+    <!-- Info Panel -->
+    <div id="info" class="panel">
+        <div class="title">MAZE RUNNER</div>
         <div class="key-hint">WASD/Arrows: Move</div>
         <div class="key-hint">Mouse: Look Around</div>
         <div class="key-hint">SPACE: New Maze</div>
+        <div class="key-hint">H: Help</div>
         <div id="status"></div>
     </div>
+
+    <!-- Timer -->
+    <div id="timer" class="panel">
+        <div class="stat">Time: <span class="stat-value" id="current-time">0.0s</span></div>
+        <div class="stat">Best: <span class="stat-value" id="best-time">--</span></div>
+    </div>
+
+    <!-- FPS Counter -->
+    <div id="fps-counter" class="panel">
+        FPS: <span id="fps-value">60</span>
+    </div>
+
+    <!-- Minimap -->
     <canvas id="minimap"></canvas>
+
+    <!-- Settings Panel -->
+    <div id="settings-panel" class="panel">
+        <div class="title">SETTINGS</div>
+
+        <div class="setting-group">
+            <label class="setting-label">
+                Mouse Sensitivity: <span class="setting-value" id="sensitivity-value">1.0</span>
+            </label>
+            <input type="range" id="sensitivity-slider" min="0.1" max="3.0" step="0.1" value="1.0">
+        </div>
+
+        <div class="setting-group">
+            <label class="setting-label">Maze Size</label>
+            <select id="maze-size">
+                <option value="11">Small (11x11)</option>
+                <option value="21" selected>Medium (21x21)</option>
+                <option value="31">Large (31x31)</option>
+                <option value="41">Huge (41x41)</option>
+            </select>
+        </div>
+
+        <div class="setting-group">
+            <label class="setting-label">Graphics Quality</label>
+            <select id="graphics-quality">
+                <option value="low">Low</option>
+                <option value="medium" selected>Medium</option>
+                <option value="high">High</option>
+            </select>
+        </div>
+
+        <button onclick="applySettings()">Apply Settings</button>
+        <button onclick="closeSettings()">Close (ESC)</button>
+    </div>
+
+    <!-- Help Overlay -->
+    <div id="help-overlay">
+        <div class="help-content">
+            <h1 style="text-align: center; margin-bottom: 30px;">KEYBOARD SHORTCUTS</h1>
+
+            <div class="help-section">
+                <h2>Movement</h2>
+                <div class="shortcut">
+                    <span>Move Forward</span>
+                    <span class="key">W / ↑</span>
+                </div>
+                <div class="shortcut">
+                    <span>Move Backward</span>
+                    <span class="key">S / ↓</span>
+                </div>
+                <div class="shortcut">
+                    <span>Strafe Left</span>
+                    <span class="key">A / ←</span>
+                </div>
+                <div class="shortcut">
+                    <span>Strafe Right</span>
+                    <span class="key">D / →</span>
+                </div>
+                <div class="shortcut">
+                    <span>Look Around</span>
+                    <span class="key">Mouse</span>
+                </div>
+            </div>
+
+            <div class="help-section">
+                <h2>Game Controls</h2>
+                <div class="shortcut">
+                    <span>Generate New Maze</span>
+                    <span class="key">SPACE</span>
+                </div>
+                <div class="shortcut">
+                    <span>Pause / Resume</span>
+                    <span class="key">P</span>
+                </div>
+                <div class="shortcut">
+                    <span>Settings</span>
+                    <span class="key">ESC</span>
+                </div>
+            </div>
+
+            <div class="help-section">
+                <h2>Display Options</h2>
+                <div class="shortcut">
+                    <span>Toggle Minimap</span>
+                    <span class="key">M</span>
+                </div>
+                <div class="shortcut">
+                    <span>Toggle FPS Counter</span>
+                    <span class="key">F</span>
+                </div>
+                <div class="shortcut">
+                    <span>Show Help</span>
+                    <span class="key">H</span>
+                </div>
+            </div>
+
+            <button onclick="closeHelp()" style="margin-top: 30px;">Close (H or ESC)</button>
+        </div>
+    </div>
+
+    <!-- Pause Overlay -->
+    <div id="pause-overlay">
+        <div class="pause-text">PAUSED</div>
+    </div>
+
+    <!-- Mobile Controls -->
+    <div id="mobile-controls">
+        <div class="joystick-container" id="joystick-container">
+            <div class="joystick-base">
+                <div class="joystick-stick" id="joystick-stick"></div>
+            </div>
+        </div>
+        <div class="mobile-button" id="mobile-new-maze">NEW</div>
+        <div class="mobile-button" id="mobile-pause">PAUSE</div>
+    </div>
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     <script>
+        // Game state
+        let isPaused = false;
+        let showMinimap = true;
+        let showFPS = false;
+        let gameStartTime = 0;
+        let currentTime = 0;
+        let bestTime = localStorage.getItem('maze-runner-best-time') || null;
+
+        // Settings
+        let mouseSensitivity = 1.0;
+        let mazeSize = 21;
+        let graphicsQuality = 'medium';
+
+        // FPS tracking
+        let frameCount = 0;
+        let lastFPSUpdate = 0;
+        let currentFPS = 60;
+
+        // Mobile joystick
+        let joystickActive = false;
+        let joystickDirection = { x: 0, y: 0 };
+
         // Scene setup
         const scene = new THREE.Scene();
         scene.fog = new THREE.Fog(0x000000, 0, 50);
@@ -145,14 +680,13 @@
             walls = [];
             if (exitMarker) scene.remove(exitMarker);
 
-            const mazeSize = 21;
             maze = new Maze(mazeSize);
 
             // Wall material
             const wallMaterial = new THREE.MeshPhongMaterial({
                 color: 0x00ff88,
                 emissive: 0x004433,
-                shininess: 30
+                shininess: graphicsQuality === 'high' ? 50 : 30
             });
 
             const wallHeight = 3;
@@ -164,8 +698,8 @@
                         const wallGeometry = new THREE.BoxGeometry(1, wallHeight, 1);
                         const wall = new THREE.Mesh(wallGeometry, wallMaterial);
                         wall.position.set(x, wallHeight / 2, z);
-                        wall.castShadow = true;
-                        wall.receiveShadow = true;
+                        wall.castShadow = graphicsQuality !== 'low';
+                        wall.receiveShadow = graphicsQuality !== 'low';
                         scene.add(wall);
                         walls.push(wall);
                     }
@@ -181,7 +715,7 @@
             const floor = new THREE.Mesh(floorGeometry, floorMaterial);
             floor.rotation.x = -Math.PI / 2;
             floor.position.set(mazeSize / 2, 0, mazeSize / 2);
-            floor.receiveShadow = true;
+            floor.receiveShadow = graphicsQuality !== 'low';
             scene.add(floor);
             walls.push(floor);
 
@@ -206,6 +740,10 @@
             camera.position.set(1, 1.6, 1);
             yaw = 0;
             pitch = 0;
+
+            // Reset timer
+            gameStartTime = Date.now();
+            currentTime = 0;
         }
 
         // Player controls
@@ -213,17 +751,41 @@
         let yaw = 0;
         let pitch = 0;
         const moveSpeed = 0.1;
-        const mouseSensitivity = 0.002;
+        const baseSensitivity = 0.002;
 
-        document.addEventListener('keydown', (e) => keys[e.key.toLowerCase()] = true);
+        document.addEventListener('keydown', (e) => {
+            keys[e.key.toLowerCase()] = true;
+
+            // Handle special keys
+            if (e.key.toLowerCase() === 'p') {
+                togglePause();
+            } else if (e.key.toLowerCase() === 'm') {
+                toggleMinimap();
+            } else if (e.key.toLowerCase() === 'f') {
+                toggleFPS();
+            } else if (e.key.toLowerCase() === 'h') {
+                toggleHelp();
+            } else if (e.key === 'Escape') {
+                if (document.getElementById('help-overlay').classList.contains('active')) {
+                    closeHelp();
+                } else {
+                    toggleSettings();
+                }
+            }
+        });
+
         document.addEventListener('keyup', (e) => {
             keys[e.key.toLowerCase()] = false;
-            if (e.key === ' ') createMaze();
+            if (e.key === ' ' && !isPaused) {
+                createMaze();
+            }
         });
 
         let isPointerLocked = false;
         renderer.domElement.addEventListener('click', () => {
-            renderer.domElement.requestPointerLock();
+            if (!isPaused) {
+                renderer.domElement.requestPointerLock();
+            }
         });
 
         document.addEventListener('pointerlockchange', () => {
@@ -231,10 +793,11 @@
         });
 
         document.addEventListener('mousemove', (e) => {
-            if (!isPointerLocked) return;
+            if (!isPointerLocked || isPaused) return;
 
-            yaw -= e.movementX * mouseSensitivity;
-            pitch -= e.movementY * mouseSensitivity;
+            const sensitivity = baseSensitivity * mouseSensitivity;
+            yaw -= e.movementX * sensitivity;
+            pitch -= e.movementY * sensitivity;
             pitch = Math.max(-Math.PI / 2, Math.min(Math.PI / 2, pitch));
         });
 
@@ -249,7 +812,9 @@
             return maze.grid[gridX][gridZ] === 1;
         }
 
-        function updatePlayer() {
+        function updatePlayer(delta) {
+            if (isPaused) return;
+
             camera.rotation.order = 'YXZ';
             camera.rotation.y = yaw;
             camera.rotation.x = pitch;
@@ -264,10 +829,18 @@
 
             const movement = new THREE.Vector3();
 
+            // Keyboard controls
             if (keys['w'] || keys['arrowup']) movement.add(forward);
             if (keys['s'] || keys['arrowdown']) movement.sub(forward);
             if (keys['a'] || keys['arrowleft']) movement.sub(right);
             if (keys['d'] || keys['arrowright']) movement.add(right);
+
+            // Mobile joystick controls
+            if (joystickActive) {
+                const joyForward = forward.clone().multiplyScalar(-joystickDirection.y);
+                const joyRight = right.clone().multiplyScalar(joystickDirection.x);
+                movement.add(joyForward).add(joyRight);
+            }
 
             if (movement.length() > 0) {
                 movement.normalize().multiplyScalar(moveSpeed);
@@ -281,14 +854,28 @@
             // Check if reached exit
             const distToExit = camera.position.distanceTo(exitMarker.position);
             if (distToExit < 1.5) {
+                const finalTime = currentTime;
+
+                // Update best time
+                if (!bestTime || finalTime < parseFloat(bestTime)) {
+                    bestTime = finalTime.toFixed(1);
+                    localStorage.setItem('maze-runner-best-time', bestTime);
+                }
+
                 setTimeout(() => {
-                    alert('🎉 Maze Complete! Press SPACE for new maze.');
+                    alert(`Maze Complete! Time: ${finalTime.toFixed(1)}s\nBest: ${bestTime}s\n\nPress SPACE for new maze.`);
                     createMaze();
                 }, 100);
             }
         }
 
         function drawMinimap() {
+            if (!showMinimap) {
+                minimapCanvas.style.display = 'none';
+                return;
+            }
+
+            minimapCanvas.style.display = 'block';
             minimapCtx.fillStyle = '#000';
             minimapCtx.fillRect(0, 0, 200, 200);
 
@@ -319,6 +906,7 @@
 
             // Draw player direction
             minimapCtx.strokeStyle = '#ff0000';
+            minimapCtx.lineWidth = 2;
             minimapCtx.beginPath();
             minimapCtx.moveTo(camera.position.x * cellSize, camera.position.z * cellSize);
             const dirX = camera.position.x * cellSize + Math.sin(-yaw) * 10;
@@ -327,18 +915,197 @@
             minimapCtx.stroke();
         }
 
+        function updateTimer() {
+            if (isPaused) return;
+
+            currentTime = (Date.now() - gameStartTime) / 1000;
+            document.getElementById('current-time').textContent = currentTime.toFixed(1) + 's';
+
+            if (bestTime) {
+                document.getElementById('best-time').textContent = bestTime + 's';
+            }
+        }
+
+        function updateFPS(delta) {
+            frameCount++;
+            const now = performance.now();
+
+            if (now >= lastFPSUpdate + 1000) {
+                currentFPS = Math.round(frameCount * 1000 / (now - lastFPSUpdate));
+                document.getElementById('fps-value').textContent = currentFPS;
+                frameCount = 0;
+                lastFPSUpdate = now;
+            }
+
+            if (showFPS) {
+                document.getElementById('fps-counter').style.display = 'block';
+            } else {
+                document.getElementById('fps-counter').style.display = 'none';
+            }
+        }
+
+        // UI Functions
+        function togglePause() {
+            isPaused = !isPaused;
+            document.getElementById('pause-overlay').classList.toggle('active', isPaused);
+
+            if (isPaused) {
+                document.exitPointerLock();
+            }
+        }
+
+        function toggleMinimap() {
+            showMinimap = !showMinimap;
+        }
+
+        function toggleFPS() {
+            showFPS = !showFPS;
+        }
+
+        function toggleHelp() {
+            const helpOverlay = document.getElementById('help-overlay');
+            helpOverlay.classList.toggle('active');
+
+            if (helpOverlay.classList.contains('active')) {
+                isPaused = true;
+                document.exitPointerLock();
+            } else {
+                isPaused = false;
+            }
+        }
+
+        function closeHelp() {
+            document.getElementById('help-overlay').classList.remove('active');
+            isPaused = false;
+        }
+
+        function toggleSettings() {
+            const settingsPanel = document.getElementById('settings-panel');
+            settingsPanel.classList.toggle('active');
+
+            if (settingsPanel.classList.contains('active')) {
+                isPaused = true;
+                document.exitPointerLock();
+            } else {
+                isPaused = false;
+            }
+        }
+
+        function closeSettings() {
+            document.getElementById('settings-panel').classList.remove('active');
+            isPaused = false;
+        }
+
+        function applySettings() {
+            const newMazeSize = parseInt(document.getElementById('maze-size').value);
+            const newQuality = document.getElementById('graphics-quality').value;
+
+            if (newMazeSize !== mazeSize || newQuality !== graphicsQuality) {
+                mazeSize = newMazeSize;
+                graphicsQuality = newQuality;
+
+                // Update renderer quality
+                if (graphicsQuality === 'low') {
+                    renderer.shadowMap.enabled = false;
+                    scene.fog.far = 30;
+                } else if (graphicsQuality === 'medium') {
+                    renderer.shadowMap.enabled = true;
+                    scene.fog.far = 50;
+                } else {
+                    renderer.shadowMap.enabled = true;
+                    scene.fog.far = 70;
+                }
+
+                createMaze();
+            }
+
+            closeSettings();
+        }
+
+        // Settings sliders
+        document.getElementById('sensitivity-slider').addEventListener('input', (e) => {
+            mouseSensitivity = parseFloat(e.target.value);
+            document.getElementById('sensitivity-value').textContent = mouseSensitivity.toFixed(1);
+        });
+
+        // Mobile controls
+        const joystickContainer = document.getElementById('joystick-container');
+        const joystickStick = document.getElementById('joystick-stick');
+        const joystickBase = joystickContainer.querySelector('.joystick-base');
+
+        function handleJoystickStart(e) {
+            e.preventDefault();
+            joystickActive = true;
+        }
+
+        function handleJoystickMove(e) {
+            if (!joystickActive) return;
+            e.preventDefault();
+
+            const touch = e.touches ? e.touches[0] : e;
+            const rect = joystickBase.getBoundingClientRect();
+            const centerX = rect.left + rect.width / 2;
+            const centerY = rect.top + rect.height / 2;
+
+            let deltaX = touch.clientX - centerX;
+            let deltaY = touch.clientY - centerY;
+
+            const distance = Math.sqrt(deltaX * deltaX + deltaY * deltaY);
+            const maxDistance = 35;
+
+            if (distance > maxDistance) {
+                deltaX = deltaX / distance * maxDistance;
+                deltaY = deltaY / distance * maxDistance;
+            }
+
+            joystickStick.style.transform = `translate(calc(-50% + ${deltaX}px), calc(-50% + ${deltaY}px))`;
+
+            joystickDirection.x = deltaX / maxDistance;
+            joystickDirection.y = deltaY / maxDistance;
+        }
+
+        function handleJoystickEnd(e) {
+            e.preventDefault();
+            joystickActive = false;
+            joystickStick.style.transform = 'translate(-50%, -50%)';
+            joystickDirection = { x: 0, y: 0 };
+        }
+
+        joystickContainer.addEventListener('touchstart', handleJoystickStart);
+        joystickContainer.addEventListener('touchmove', handleJoystickMove);
+        joystickContainer.addEventListener('touchend', handleJoystickEnd);
+        joystickContainer.addEventListener('mousedown', handleJoystickStart);
+        document.addEventListener('mousemove', handleJoystickMove);
+        document.addEventListener('mouseup', handleJoystickEnd);
+
+        document.getElementById('mobile-new-maze').addEventListener('click', () => {
+            if (!isPaused) createMaze();
+        });
+
+        document.getElementById('mobile-pause').addEventListener('click', () => {
+            togglePause();
+        });
+
         // Animation loop
+        let lastTime = performance.now();
+
         function animate() {
             requestAnimationFrame(animate);
 
-            updatePlayer();
+            const now = performance.now();
+            const delta = (now - lastTime) / 1000;
+            lastTime = now;
+
+            updatePlayer(delta);
 
             // Animate exit marker
-            if (exitMarker) {
+            if (exitMarker && !isPaused) {
                 exitMarker.rotation.y += 0.02;
             }
 
             drawMinimap();
+            updateTimer();
+            updateFPS(delta);
 
             const distToExit = camera.position.distanceTo(exitMarker.position);
             document.getElementById('status').innerHTML = `<div style="margin-top: 10px;">Distance to Exit: ${distToExit.toFixed(1)}m</div>`;
@@ -354,8 +1121,13 @@
         });
 
         // Initialize
-        createMaze();
-        animate();
+        window.addEventListener('load', () => {
+            setTimeout(() => {
+                document.getElementById('loading-screen').style.display = 'none';
+                createMaze();
+                animate();
+            }, 1000);
+        });
     </script>
 </body>
 </html>

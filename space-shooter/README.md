@@ -1,6 +1,6 @@
 # 🚀 Space Shooter
 
-Classic space shooter game in 3D with enemies and power-ups.
+Classic space shooter game in 3D with enemies and power-ups. Enhanced with modern game features including settings, high scores, mobile controls, and help system.
 
 ## Database Schema
 
