@@ -155,6 +155,15 @@ Open `index.html` in a modern web browser, or navigate to:
 | Scroll | Zoom |
 | Click | Change color |
 | Space | Auto-rotate |
+| H | Help • P: Pause • F: FPS |
+| Pinch to zoom • Tap to change color
+    </div>
+
+    <script>
+        let scene, camera, renderer, cube, particles;
+        let mouseX = 0, mouseY = 0;
+        let autoRotate = true;
+        let targetRotation = { x | 0, y: 0 }; |
 
 
 ## Dependencies

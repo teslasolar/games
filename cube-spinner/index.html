@@ -1,42 +1,480 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Cube Spinner</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="description" content="Interactive 3D cube with mouse control, color animations, and neon cyberpunk aesthetics. Spin, zoom, and customize your experience.">
+    <meta name="keywords" content="3D cube, Three.js, interactive, neon, cyberpunk, WebGL">
+    <meta name="author" content="Konomi Games">
+
+    <!-- Open Graph / Social Media Tags -->
+    <meta property="og:type" content="website">
+    <meta property="og:title" content="Cube Spinner - Interactive 3D Experience">
+    <meta property="og:description" content="Interactive 3D cube with mouse control, color animations, and neon cyberpunk aesthetics.">
+    <meta property="og:image" content="https://teslasolar.github.io/games/cube-spinner/preview.png">
+    <meta property="og:url" content="https://teslasolar.github.io/games/cube-spinner/">
+
+    <!-- Twitter Card Tags -->
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="Cube Spinner - Interactive 3D Experience">
+    <meta name="twitter:description" content="Interactive 3D cube with mouse control and neon cyberpunk aesthetics.">
+    <meta name="twitter:image" content="https://teslasolar.github.io/games/cube-spinner/preview.png">
+
+    <title>Cube Spinner - Interactive 3D Experience</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     <style>
-        body { margin: 0; overflow: hidden; background: #000; }
-        canvas { display: block; }
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            overflow: hidden;
+            background: #000;
+            font-family: 'Courier New', monospace;
+            color: #00ff88;
+            touch-action: none;
+        }
+
+        canvas {
+            display: block;
+            transition: opacity 0.5s ease;
+        }
+
+        /* Loading Screen */
+        #loading {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: #000;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 9999;
+            transition: opacity 0.5s ease;
+        }
+
+        #loading.hidden {
+            opacity: 0;
+            pointer-events: none;
+        }
+
+        .spinner {
+            width: 60px;
+            height: 60px;
+            border: 4px solid rgba(0, 255, 136, 0.2);
+            border-top: 4px solid #00ff88;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-bottom: 20px;
+            box-shadow: 0 0 20px rgba(0, 255, 136, 0.5);
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .loading-text {
+            color: #00ff88;
+            font-size: 18px;
+            letter-spacing: 2px;
+            animation: pulse 1.5s ease-in-out infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 0.6; }
+            50% { opacity: 1; }
+        }
+
+        /* Info Panel */
         #info {
             position: absolute;
             top: 20px;
             left: 20px;
             color: #00ff88;
-            font-family: 'Courier New', monospace;
             font-size: 14px;
-            background: rgba(0, 20, 40, 0.8);
+            background: rgba(0, 20, 40, 0.9);
             padding: 15px;
             border-radius: 8px;
             border: 2px solid #00ff88;
+            box-shadow: 0 0 20px rgba(0, 255, 136, 0.3);
+            transition: all 0.3s ease;
+            z-index: 100;
+        }
+
+        #info:hover {
+            box-shadow: 0 0 30px rgba(0, 255, 136, 0.5);
+            transform: translateY(-2px);
+        }
+
+        #info strong {
+            text-shadow: 0 0 10px #00ff88;
+        }
+
+        #info small {
+            line-height: 1.8;
+        }
+
+        /* FPS Counter */
+        #fps {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            background: rgba(0, 20, 40, 0.9);
+            padding: 10px 15px;
+            border-radius: 8px;
+            border: 2px solid #00ff88;
+            font-size: 14px;
+            box-shadow: 0 0 20px rgba(0, 255, 136, 0.3);
+            display: none;
+            z-index: 100;
+        }
+
+        #fps.visible {
+            display: block;
+        }
+
+        /* Pause Overlay */
+        #pause-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.8);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            font-size: 48px;
+            font-weight: bold;
+            text-shadow: 0 0 20px #00ff88;
+            z-index: 200;
+            animation: fadeIn 0.3s ease;
+        }
+
+        #pause-overlay.visible {
+            display: flex;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        /* Settings Panel */
+        #settings {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(0, 20, 40, 0.95);
+            padding: 30px;
+            border-radius: 12px;
+            border: 2px solid #00ff88;
+            box-shadow: 0 0 40px rgba(0, 255, 136, 0.5);
+            min-width: 350px;
+            max-width: 90%;
+            display: none;
+            z-index: 300;
+            animation: slideIn 0.3s ease;
+        }
+
+        #settings.visible {
+            display: block;
+        }
+
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translate(-50%, -60%);
+            }
+            to {
+                opacity: 1;
+                transform: translate(-50%, -50%);
+            }
+        }
+
+        #settings h2 {
+            margin-bottom: 20px;
+            text-align: center;
+            text-shadow: 0 0 10px #00ff88;
+            font-size: 24px;
+        }
+
+        .setting-group {
+            margin-bottom: 20px;
+        }
+
+        .setting-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-size: 14px;
+        }
+
+        .setting-group select,
+        .setting-group input[type="checkbox"] {
+            width: 100%;
+            padding: 8px;
+            background: rgba(0, 40, 60, 0.8);
+            border: 1px solid #00ff88;
+            border-radius: 4px;
+            color: #00ff88;
+            font-family: 'Courier New', monospace;
+            cursor: pointer;
+        }
+
+        .setting-group select:focus {
+            outline: none;
+            box-shadow: 0 0 10px rgba(0, 255, 136, 0.5);
+        }
+
+        .checkbox-wrapper {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .checkbox-wrapper input[type="checkbox"] {
+            width: 20px;
+            height: 20px;
+            accent-color: #00ff88;
+        }
+
+        .close-btn {
+            width: 100%;
+            padding: 10px;
+            margin-top: 20px;
+            background: #00ff88;
+            color: #000;
+            border: none;
+            border-radius: 6px;
+            font-family: 'Courier New', monospace;
+            font-size: 14px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .close-btn:hover {
+            background: #00ffaa;
+            box-shadow: 0 0 20px rgba(0, 255, 136, 0.5);
+            transform: translateY(-2px);
+        }
+
+        /* Help Overlay */
+        #help {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(0, 20, 40, 0.95);
+            padding: 30px;
+            border-radius: 12px;
+            border: 2px solid #00ff88;
+            box-shadow: 0 0 40px rgba(0, 255, 136, 0.5);
+            min-width: 400px;
+            max-width: 90%;
+            display: none;
+            z-index: 400;
+            animation: slideIn 0.3s ease;
+        }
+
+        #help.visible {
+            display: block;
+        }
+
+        #help h2 {
+            margin-bottom: 20px;
+            text-align: center;
+            text-shadow: 0 0 10px #00ff88;
+            font-size: 24px;
+        }
+
+        .shortcuts-grid {
+            display: grid;
+            grid-template-columns: 120px 1fr;
+            gap: 12px;
+            margin-bottom: 20px;
+        }
+
+        .shortcut-key {
+            background: rgba(0, 255, 136, 0.2);
+            padding: 8px;
+            border-radius: 4px;
+            text-align: center;
+            border: 1px solid #00ff88;
+            font-weight: bold;
+        }
+
+        .shortcut-desc {
+            padding: 8px;
+            display: flex;
+            align-items: center;
+        }
+
+        /* Mobile Touch Controls */
+        .touch-indicator {
+            position: absolute;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(0, 20, 40, 0.9);
+            padding: 10px 20px;
+            border-radius: 8px;
+            border: 2px solid #00ff88;
+            font-size: 12px;
+            display: none;
+            z-index: 100;
+        }
+
+        @media (max-width: 768px) {
+            .touch-indicator {
+                display: block;
+            }
+
+            #info {
+                font-size: 12px;
+                padding: 10px;
+            }
+
+            #settings, #help {
+                min-width: 300px;
+                padding: 20px;
+            }
+        }
+
+        /* Responsive */
+        @media (max-width: 480px) {
+            #info {
+                top: 10px;
+                left: 10px;
+                right: 10px;
+            }
         }
     </style>
 </head>
 <body>
+    <!-- Loading Screen -->
+    <div id="loading">
+        <div class="spinner"></div>
+        <div class="loading-text">INITIALIZING CUBE SPINNER...</div>
+    </div>
+
+    <!-- Info Panel -->
     <div id="info">
         🎲 <strong>CUBE SPINNER</strong><br>
         <small>
         • Mouse: Rotate camera<br>
         • Scroll: Zoom<br>
         • Click: Change color<br>
-        • Space: Auto-rotate
+        • Space: Auto-rotate<br>
+        • H: Help • P: Pause • F: FPS
         </small>
     </div>
 
+    <!-- FPS Counter -->
+    <div id="fps">FPS: <span id="fps-value">60</span></div>
+
+    <!-- Pause Overlay -->
+    <div id="pause-overlay">
+        ⏸️ PAUSED<br>
+        <div style="font-size: 16px; margin-top: 20px;">Press P to resume</div>
+    </div>
+
+    <!-- Settings Panel -->
+    <div id="settings">
+        <h2>⚙️ SETTINGS</h2>
+        <div class="setting-group">
+            <label>Graphics Quality</label>
+            <select id="quality">
+                <option value="low">Low</option>
+                <option value="medium" selected>Medium</option>
+                <option value="high">High</option>
+            </select>
+        </div>
+        <div class="setting-group">
+            <label>Sound</label>
+            <div class="checkbox-wrapper">
+                <input type="checkbox" id="sound" checked>
+                <span>Enable sound effects</span>
+            </div>
+        </div>
+        <div class="setting-group">
+            <label>Particle Effects</label>
+            <div class="checkbox-wrapper">
+                <input type="checkbox" id="particles" checked>
+                <span>Show particles</span>
+            </div>
+        </div>
+        <button class="close-btn" onclick="toggleSettings()">CLOSE</button>
+    </div>
+
+    <!-- Help Overlay -->
+    <div id="help">
+        <h2>⌨️ KEYBOARD SHORTCUTS</h2>
+        <div class="shortcuts-grid">
+            <div class="shortcut-key">MOUSE</div>
+            <div class="shortcut-desc">Rotate camera</div>
+
+            <div class="shortcut-key">SCROLL</div>
+            <div class="shortcut-desc">Zoom in/out</div>
+
+            <div class="shortcut-key">CLICK</div>
+            <div class="shortcut-desc">Change cube color</div>
+
+            <div class="shortcut-key">SPACE</div>
+            <div class="shortcut-desc">Toggle auto-rotation</div>
+
+            <div class="shortcut-key">P</div>
+            <div class="shortcut-desc">Pause/Resume</div>
+
+            <div class="shortcut-key">F</div>
+            <div class="shortcut-desc">Toggle FPS counter</div>
+
+            <div class="shortcut-key">ESC</div>
+            <div class="shortcut-desc">Open settings</div>
+
+            <div class="shortcut-key">H</div>
+            <div class="shortcut-desc">Show this help</div>
+        </div>
+        <button class="close-btn" onclick="toggleHelp()">CLOSE</button>
+    </div>
+
+    <!-- Touch Indicator -->
+    <div class="touch-indicator">
+        👆 Swipe to rotate • Pinch to zoom • Tap to change color
+    </div>
+
     <script>
-        let scene, camera, renderer, cube;
+        let scene, camera, renderer, cube, particles;
         let mouseX = 0, mouseY = 0;
         let autoRotate = true;
         let targetRotation = { x: 0, y: 0 };
+        let isPaused = false;
+        let showFPS = false;
+
+        // FPS tracking
+        let frameCount = 0;
+        let lastTime = performance.now();
+        let fps = 60;
+
+        // Graphics quality settings
+        let qualitySettings = {
+            low: { particles: 200, antialias: false },
+            medium: { particles: 500, antialias: true },
+            high: { particles: 1000, antialias: true }
+        };
+        let currentQuality = 'medium';
+
+        // Touch controls
+        let touchStartX = 0, touchStartY = 0;
+        let touchStartDistance = 0;
 
         function init() {
             // Scene
@@ -48,8 +486,10 @@
             camera.position.z = 5;
 
             // Renderer
-            renderer = new THREE.WebGLRenderer({ antialias: true });
+            const antialias = qualitySettings[currentQuality].antialias;
+            renderer = new THREE.WebGLRenderer({ antialias: antialias });
             renderer.setSize(window.innerWidth, window.innerHeight);
+            renderer.setPixelRatio(window.devicePixelRatio);
             document.body.appendChild(renderer.domElement);
 
             // Cube
@@ -93,12 +533,26 @@
             window.addEventListener('resize', onResize);
             window.addEventListener('wheel', onWheel);
 
+            // Touch events for mobile
+            document.addEventListener('touchstart', onTouchStart, { passive: false });
+            document.addEventListener('touchmove', onTouchMove, { passive: false });
+            document.addEventListener('touchend', onTouchEnd);
+
+            // Hide loading screen after a short delay
+            setTimeout(() => {
+                document.getElementById('loading').classList.add('hidden');
+            }, 1000);
+
             animate();
         }
 
         function createParticles() {
+            if (particles) {
+                scene.remove(particles);
+            }
+
             const particlesGeometry = new THREE.BufferGeometry();
-            const particlesCount = 500;
+            const particlesCount = qualitySettings[currentQuality].particles;
             const posArray = new Float32Array(particlesCount * 3);
 
             for (let i = 0; i < particlesCount * 3; i++) {
@@ -114,12 +568,15 @@
                 opacity: 0.8
             });
 
-            const particlesMesh = new THREE.Points(particlesGeometry, particlesMaterial);
-            scene.add(particlesMesh);
+            particles = new THREE.Points(particlesGeometry, particlesMaterial);
+
+            if (document.getElementById('particles').checked) {
+                scene.add(particles);
+            }
         }
 
         function onMouseMove(event) {
-            if (!autoRotate) {
+            if (!autoRotate && !isPaused) {
                 mouseX = (event.clientX / window.innerWidth) * 2 - 1;
                 mouseY = -(event.clientY / window.innerHeight) * 2 + 1;
 
@@ -128,7 +585,9 @@
             }
         }
 
-        function changeColor() {
+        function changeColor(event) {
+            if (isPaused) return;
+
             const colors = [0x00ff88, 0xff0088, 0x0088ff, 0xff8800, 0x8800ff, 0xffff00];
             const newColor = colors[Math.floor(Math.random() * colors.length)];
             cube.material.color.setHex(newColor);
@@ -136,12 +595,49 @@
         }
 
         function onKeyDown(event) {
-            if (event.code === 'Space') {
-                autoRotate = !autoRotate;
+            switch(event.code) {
+                case 'Space':
+                    event.preventDefault();
+                    autoRotate = !autoRotate;
+                    break;
+                case 'KeyP':
+                    togglePause();
+                    break;
+                case 'KeyF':
+                    toggleFPS();
+                    break;
+                case 'Escape':
+                    toggleSettings();
+                    break;
+                case 'KeyH':
+                    toggleHelp();
+                    break;
             }
         }
 
+        function togglePause() {
+            isPaused = !isPaused;
+            document.getElementById('pause-overlay').classList.toggle('visible', isPaused);
+        }
+
+        function toggleFPS() {
+            showFPS = !showFPS;
+            document.getElementById('fps').classList.toggle('visible', showFPS);
+        }
+
+        function toggleSettings() {
+            const settings = document.getElementById('settings');
+            settings.classList.toggle('visible');
+        }
+
+        function toggleHelp() {
+            const help = document.getElementById('help');
+            help.classList.toggle('visible');
+        }
+
         function onWheel(event) {
+            if (isPaused) return;
+
             camera.position.z += event.deltaY * 0.01;
             camera.position.z = Math.max(2, Math.min(10, camera.position.z));
         }
@@ -152,24 +648,111 @@
             renderer.setSize(window.innerWidth, window.innerHeight);
         }
 
+        // Touch event handlers
+        function onTouchStart(event) {
+            event.preventDefault();
+
+            if (event.touches.length === 1) {
+                touchStartX = event.touches[0].clientX;
+                touchStartY = event.touches[0].clientY;
+            } else if (event.touches.length === 2) {
+                const dx = event.touches[0].clientX - event.touches[1].clientX;
+                const dy = event.touches[0].clientY - event.touches[1].clientY;
+                touchStartDistance = Math.sqrt(dx * dx + dy * dy);
+            }
+        }
+
+        function onTouchMove(event) {
+            event.preventDefault();
+
+            if (isPaused) return;
+
+            if (event.touches.length === 1) {
+                // Single finger - rotate
+                const deltaX = event.touches[0].clientX - touchStartX;
+                const deltaY = event.touches[0].clientY - touchStartY;
+
+                targetRotation.y += deltaX * 0.01;
+                targetRotation.x += deltaY * 0.01;
+
+                touchStartX = event.touches[0].clientX;
+                touchStartY = event.touches[0].clientY;
+
+                autoRotate = false;
+            } else if (event.touches.length === 2) {
+                // Two fingers - zoom
+                const dx = event.touches[0].clientX - event.touches[1].clientX;
+                const dy = event.touches[0].clientY - event.touches[1].clientY;
+                const distance = Math.sqrt(dx * dx + dy * dy);
+
+                const delta = touchStartDistance - distance;
+                camera.position.z += delta * 0.01;
+                camera.position.z = Math.max(2, Math.min(10, camera.position.z));
+
+                touchStartDistance = distance;
+            }
+        }
+
+        function onTouchEnd(event) {
+            if (event.touches.length === 0) {
+                // Check for tap (color change)
+                const touchDuration = Date.now() - lastTime;
+                if (touchDuration < 200) {
+                    changeColor();
+                }
+            }
+        }
+
+        function updateFPS() {
+            frameCount++;
+            const currentTime = performance.now();
+
+            if (currentTime >= lastTime + 1000) {
+                fps = Math.round((frameCount * 1000) / (currentTime - lastTime));
+                document.getElementById('fps-value').textContent = fps;
+                frameCount = 0;
+                lastTime = currentTime;
+            }
+        }
+
         function animate() {
             requestAnimationFrame(animate);
 
-            if (autoRotate) {
-                cube.rotation.x += 0.01;
-                cube.rotation.y += 0.01;
-            } else {
-                // Smooth rotation to target
-                cube.rotation.x += (targetRotation.x - cube.rotation.x) * 0.05;
-                cube.rotation.y += (targetRotation.y - cube.rotation.y) * 0.05;
+            if (!isPaused) {
+                if (autoRotate) {
+                    cube.rotation.x += 0.01;
+                    cube.rotation.y += 0.01;
+                } else {
+                    // Smooth rotation to target
+                    cube.rotation.x += (targetRotation.x - cube.rotation.x) * 0.05;
+                    cube.rotation.y += (targetRotation.y - cube.rotation.y) * 0.05;
+                }
+
+                // Animate scale
+                const scale = 1 + Math.sin(Date.now() * 0.001) * 0.1;
+                cube.scale.set(scale, scale, scale);
+
+                renderer.render(scene, camera);
             }
 
-            // Animate scale
-            const scale = 1 + Math.sin(Date.now() * 0.001) * 0.1;
-            cube.scale.set(scale, scale, scale);
-
-            renderer.render(scene, camera);
+            if (showFPS) {
+                updateFPS();
+            }
         }
+
+        // Settings event listeners
+        document.getElementById('quality').addEventListener('change', function(e) {
+            currentQuality = e.target.value;
+            createParticles();
+        });
+
+        document.getElementById('particles').addEventListener('change', function(e) {
+            if (e.target.checked) {
+                scene.add(particles);
+            } else {
+                scene.remove(particles);
+            }
+        });
 
         init();
     </script>
