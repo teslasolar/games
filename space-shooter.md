@@ -1,76 +1,666 @@
 # Space Shooter
 
-Classic space shooter game in 3D with enemies and power-ups.
+Classic space shooter game in 3D with enemies and power-ups. Enhanced with modern game features including settings, high scores, mobile controls, and help system.
 
 ```html
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Space Shooter</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="description" content="Space Shooter - Classic 3D space shooter game with neon cyberpunk aesthetics. Dodge enemies, shoot to survive!">
+    <meta name="keywords" content="space shooter, 3D game, arcade, WebGL, Three.js">
+    <meta name="author" content="Game Developer">
+
+    <!-- Open Graph / Social Media Meta Tags -->
+    <meta property="og:type" content="website">
+    <meta property="og:title" content="Space Shooter - 3D Arcade Game">
+    <meta property="og:description" content="Classic 3D space shooter with neon cyberpunk aesthetics. Battle enemies in space!">
+    <meta property="og:image" content="https://via.placeholder.com/1200x630/000000/00ff88?text=Space+Shooter">
+    <meta property="og:url" content="">
+
+    <!-- Twitter Card Meta Tags -->
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="Space Shooter - 3D Arcade Game">
+    <meta name="twitter:description" content="Classic 3D space shooter with neon cyberpunk aesthetics">
+    <meta name="twitter:image" content="https://via.placeholder.com/1200x630/000000/00ff88?text=Space+Shooter">
+
+    <title>Space Shooter - 3D Arcade Game</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     <style>
-        body { margin: 0; overflow: hidden; background: #000; }
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            overflow: hidden;
+            background: #000;
+            font-family: 'Courier New', monospace;
+            -webkit-touch-callout: none;
+            -webkit-user-select: none;
+            user-select: none;
+        }
+
         canvas { display: block; }
+
+        /* Loading Screen */
+        #loading {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: #000;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 9999;
+            transition: opacity 0.5s;
+        }
+
+        #loading.hidden {
+            opacity: 0;
+            pointer-events: none;
+        }
+
+        .spinner {
+            width: 60px;
+            height: 60px;
+            border: 4px solid rgba(0, 255, 136, 0.2);
+            border-top: 4px solid #00ff88;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        #loading-text {
+            color: #00ff88;
+            margin-top: 20px;
+            font-size: 18px;
+            text-shadow: 0 0 10px #00ff88;
+        }
+
+        /* HUD */
         #hud {
             position: absolute;
             top: 20px;
             width: 100%;
             text-align: center;
             color: #00ff88;
-            font-family: 'Courier New', monospace;
             font-size: 20px;
             font-weight: bold;
             text-shadow: 0 0 10px #00ff88;
+            pointer-events: none;
         }
+
+        #high-score {
+            font-size: 14px;
+            opacity: 0.8;
+            margin-top: 5px;
+        }
+
+        /* FPS Counter */
+        #fps-counter {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            color: #00ff88;
+            font-size: 14px;
+            background: rgba(0, 20, 40, 0.8);
+            padding: 8px 12px;
+            border-radius: 5px;
+            border: 1px solid #00ff88;
+            display: none;
+            text-shadow: 0 0 5px #00ff88;
+        }
+
+        /* Info Panel */
         #info {
             position: absolute;
             bottom: 20px;
             left: 20px;
             color: #00ff88;
-            font-family: 'Courier New', monospace;
             font-size: 12px;
             background: rgba(0, 20, 40, 0.8);
             padding: 10px;
             border-radius: 8px;
             border: 1px solid #00ff88;
+            text-shadow: 0 0 5px #00ff88;
         }
+
+        #info div {
+            margin: 3px 0;
+        }
+
+        /* Pause Overlay */
+        #pause-overlay {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            color: #00ff88;
+            font-size: 50px;
+            font-weight: bold;
+            text-align: center;
+            display: none;
+            text-shadow: 0 0 20px #00ff88;
+            background: rgba(0, 0, 0, 0.8);
+            padding: 40px 80px;
+            border: 2px solid #00ff88;
+            border-radius: 10px;
+        }
+
+        #pause-overlay div {
+            font-size: 18px;
+            margin-top: 20px;
+            opacity: 0.8;
+        }
+
+        /* Game Over */
         #gameover {
             position: absolute;
             top: 50%;
             left: 50%;
             transform: translate(-50%, -50%);
             color: #ff4444;
-            font-family: 'Courier New', monospace;
             font-size: 40px;
             font-weight: bold;
             text-align: center;
             display: none;
             text-shadow: 0 0 20px #ff4444;
+            background: rgba(0, 0, 0, 0.9);
+            padding: 40px;
+            border: 2px solid #ff4444;
+            border-radius: 10px;
+        }
+
+        #gameover .final-score {
+            color: #00ff88;
+            font-size: 24px;
+            margin: 20px 0;
+            text-shadow: 0 0 10px #00ff88;
+        }
+
+        #gameover .restart-text {
+            font-size: 20px;
+            color: #00ff88;
+            text-shadow: 0 0 10px #00ff88;
+        }
+
+        /* Settings Panel */
+        #settings-panel {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(0, 20, 40, 0.95);
+            border: 2px solid #00ff88;
+            border-radius: 10px;
+            padding: 30px;
+            color: #00ff88;
+            display: none;
+            z-index: 1000;
+            min-width: 400px;
+            max-width: 90%;
+            box-shadow: 0 0 30px rgba(0, 255, 136, 0.3);
+        }
+
+        #settings-panel h2 {
+            margin: 0 0 20px 0;
+            text-align: center;
+            font-size: 28px;
+            text-shadow: 0 0 15px #00ff88;
+        }
+
+        .setting-row {
+            margin: 20px 0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .setting-label {
+            font-size: 16px;
+            text-shadow: 0 0 5px #00ff88;
+        }
+
+        .setting-control {
+            display: flex;
+            gap: 10px;
+        }
+
+        .btn {
+            background: rgba(0, 255, 136, 0.2);
+            border: 1px solid #00ff88;
+            color: #00ff88;
+            padding: 8px 16px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-family: 'Courier New', monospace;
+            font-size: 14px;
+            transition: all 0.3s;
+            text-shadow: 0 0 5px #00ff88;
+        }
+
+        .btn:hover {
+            background: rgba(0, 255, 136, 0.4);
+            box-shadow: 0 0 10px rgba(0, 255, 136, 0.5);
+        }
+
+        .btn.active {
+            background: #00ff88;
+            color: #000;
+            text-shadow: none;
+        }
+
+        .close-btn {
+            display: block;
+            margin: 20px auto 0;
+            width: 100%;
+            padding: 12px;
+            font-size: 16px;
+        }
+
+        /* Help Overlay */
+        #help-overlay {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(0, 20, 40, 0.95);
+            border: 2px solid #00ff88;
+            border-radius: 10px;
+            padding: 30px;
+            color: #00ff88;
+            display: none;
+            z-index: 1000;
+            min-width: 400px;
+            max-width: 90%;
+            box-shadow: 0 0 30px rgba(0, 255, 136, 0.3);
+        }
+
+        #help-overlay h2 {
+            margin: 0 0 20px 0;
+            text-align: center;
+            font-size: 28px;
+            text-shadow: 0 0 15px #00ff88;
+        }
+
+        .help-section {
+            margin: 15px 0;
+        }
+
+        .help-section h3 {
+            font-size: 18px;
+            margin-bottom: 10px;
+            text-shadow: 0 0 10px #00ff88;
+        }
+
+        .shortcut {
+            display: flex;
+            justify-content: space-between;
+            padding: 5px 0;
+            border-bottom: 1px solid rgba(0, 255, 136, 0.2);
+        }
+
+        .key {
+            background: rgba(0, 255, 136, 0.2);
+            padding: 2px 8px;
+            border-radius: 3px;
+            border: 1px solid #00ff88;
+        }
+
+        /* Touch Controls */
+        #touch-controls {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            height: 200px;
+            display: none;
+            pointer-events: none;
+        }
+
+        .touch-btn {
+            position: absolute;
+            background: rgba(0, 255, 136, 0.2);
+            border: 2px solid #00ff88;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #00ff88;
+            font-size: 24px;
+            font-weight: bold;
+            pointer-events: all;
+            touch-action: none;
+            text-shadow: 0 0 10px #00ff88;
+        }
+
+        #joystick {
+            left: 30px;
+            bottom: 30px;
+            width: 120px;
+            height: 120px;
+        }
+
+        #shoot-btn {
+            right: 30px;
+            bottom: 30px;
+            width: 80px;
+            height: 80px;
+        }
+
+        .touch-btn:active {
+            background: rgba(0, 255, 136, 0.4);
+            box-shadow: 0 0 20px rgba(0, 255, 136, 0.5);
+        }
+
+        /* Mobile Responsive */
+        @media (max-width: 768px) {
+            #hud { font-size: 16px; }
+            #info { font-size: 10px; }
+            #settings-panel, #help-overlay {
+                min-width: 90%;
+                padding: 20px;
+            }
+            #settings-panel h2, #help-overlay h2 { font-size: 22px; }
+            .setting-label { font-size: 14px; }
+        }
+
+        @media (hover: none) and (pointer: coarse) {
+            #touch-controls { display: block; }
+            #info { bottom: 220px; }
         }
     </style>
 </head>
 <body>
+    <!-- Loading Screen -->
+    <div id="loading">
+        <div class="spinner"></div>
+        <div id="loading-text">LOADING SPACE SHOOTER...</div>
+    </div>
+
+    <!-- HUD -->
     <div id="hud">
         SCORE: <span id="score">0</span> | HEALTH: <span id="health">100</span>
+        <div id="high-score">HIGH SCORE: <span id="high-score-value">0</span></div>
     </div>
+
+    <!-- FPS Counter -->
+    <div id="fps-counter">FPS: <span id="fps-value">60</span></div>
+
+    <!-- Info Panel -->
     <div id="info">
-        🚀 Arrow Keys: Move | Space: Shoot | R: Restart
+        <div>Arrow Keys: Move</div>
+        <div>Space: Shoot</div>
+        <div>P: Pause | H: Help | ESC: Settings</div>
     </div>
+
+    <!-- Pause Overlay -->
+    <div id="pause-overlay">
+        PAUSED
+        <div>Press P to Resume</div>
+    </div>
+
+    <!-- Game Over -->
     <div id="gameover">
         GAME OVER<br>
-        <span style="font-size: 20px;">Press R to Restart</span>
+        <div class="final-score">
+            SCORE: <span id="final-score-value">0</span>
+        </div>
+        <div class="restart-text">Press R to Restart</div>
+    </div>
+
+    <!-- Settings Panel -->
+    <div id="settings-panel">
+        <h2>SETTINGS</h2>
+
+        <div class="setting-row">
+            <div class="setting-label">Difficulty:</div>
+            <div class="setting-control">
+                <button class="btn" onclick="setDifficulty('easy')">Easy</button>
+                <button class="btn active" onclick="setDifficulty('normal')">Normal</button>
+                <button class="btn" onclick="setDifficulty('hard')">Hard</button>
+            </div>
+        </div>
+
+        <div class="setting-row">
+            <div class="setting-label">Graphics Quality:</div>
+            <div class="setting-control">
+                <button class="btn" onclick="setGraphics('low')">Low</button>
+                <button class="btn active" onclick="setGraphics('medium')">Medium</button>
+                <button class="btn" onclick="setGraphics('high')">High</button>
+            </div>
+        </div>
+
+        <div class="setting-row">
+            <div class="setting-label">Sound:</div>
+            <div class="setting-control">
+                <button class="btn active" onclick="toggleSound()">ON</button>
+            </div>
+        </div>
+
+        <button class="btn close-btn" onclick="toggleSettings()">CLOSE</button>
+    </div>
+
+    <!-- Help Overlay -->
+    <div id="help-overlay">
+        <h2>CONTROLS & SHORTCUTS</h2>
+
+        <div class="help-section">
+            <h3>Movement</h3>
+            <div class="shortcut">
+                <span>Move Ship</span>
+                <span class="key">Arrow Keys</span>
+            </div>
+            <div class="shortcut">
+                <span>Shoot</span>
+                <span class="key">Space</span>
+            </div>
+        </div>
+
+        <div class="help-section">
+            <h3>Game Controls</h3>
+            <div class="shortcut">
+                <span>Pause/Resume</span>
+                <span class="key">P</span>
+            </div>
+            <div class="shortcut">
+                <span>Restart Game</span>
+                <span class="key">R</span>
+            </div>
+            <div class="shortcut">
+                <span>Settings</span>
+                <span class="key">ESC</span>
+            </div>
+            <div class="shortcut">
+                <span>Help</span>
+                <span class="key">H</span>
+            </div>
+            <div class="shortcut">
+                <span>Toggle FPS</span>
+                <span class="key">F</span>
+            </div>
+        </div>
+
+        <button class="btn close-btn" onclick="toggleHelp()">CLOSE</button>
+    </div>
+
+    <!-- Touch Controls -->
+    <div id="touch-controls">
+        <div id="joystick" class="touch-btn">
+            <span>⬆⬇⬅➡</span>
+        </div>
+        <div id="shoot-btn" class="touch-btn">
+            <span>FIRE</span>
+        </div>
     </div>
 
     <script>
+        // Game State
         let scene, camera, renderer;
         let player, bullets = [], enemies = [], stars = [];
-        let score = 0, health = 100;
+        let score = 0, health = 100, highScore = 0;
         let keys = {};
         let gameOver = false;
+        let paused = false;
         let lastShot = 0;
 
+        // Settings
+        let settings = {
+            difficulty: 'normal',
+            graphics: 'medium',
+            sound: true
+        };
+
+        // Difficulty parameters
+        const difficulties = {
+            easy: { spawnRate: 0.015, enemySpeed: 0.8, enemyHealth: 1, damage: 5 },
+            normal: { spawnRate: 0.02, enemySpeed: 1.0, enemyHealth: 1, damage: 10 },
+            hard: { spawnRate: 0.03, enemySpeed: 1.3, enemyHealth: 2, damage: 15 }
+        };
+
+        // FPS Counter
+        let fpsCounter = {
+            enabled: false,
+            frames: 0,
+            lastTime: performance.now(),
+            fps: 60
+        };
+
+        // Touch control state
+        let touchState = {
+            joystick: { active: false, x: 0, y: 0 },
+            shoot: false
+        };
+
+        // Load high score from localStorage
+        function loadHighScore() {
+            const saved = localStorage.getItem('spaceShooterHighScore');
+            highScore = saved ? parseInt(saved) : 0;
+            document.getElementById('high-score-value').textContent = highScore;
+        }
+
+        // Save high score to localStorage
+        function saveHighScore() {
+            if (score > highScore) {
+                highScore = score;
+                localStorage.setItem('spaceShooterHighScore', highScore);
+                document.getElementById('high-score-value').textContent = highScore;
+            }
+        }
+
+        // Settings functions
+        function setDifficulty(level) {
+            settings.difficulty = level;
+            updateSettingsUI('difficulty', level);
+        }
+
+        function setGraphics(quality) {
+            settings.graphics = quality;
+            updateSettingsUI('graphics', quality);
+            applyGraphicsSettings();
+        }
+
+        function toggleSound() {
+            settings.sound = !settings.sound;
+            const btn = event.target;
+            btn.textContent = settings.sound ? 'ON' : 'OFF';
+            btn.classList.toggle('active');
+        }
+
+        function updateSettingsUI(setting, value) {
+            const buttons = document.querySelectorAll(`#settings-panel .setting-row:has(.setting-label:contains("${setting}")) .btn`);
+            if (setting === 'difficulty') {
+                document.querySelectorAll('#settings-panel .setting-row')[0].querySelectorAll('.btn').forEach(btn => {
+                    btn.classList.remove('active');
+                    if (btn.textContent.toLowerCase() === value) btn.classList.add('active');
+                });
+            } else if (setting === 'graphics') {
+                document.querySelectorAll('#settings-panel .setting-row')[1].querySelectorAll('.btn').forEach(btn => {
+                    btn.classList.remove('active');
+                    if (btn.textContent.toLowerCase() === value) btn.classList.add('active');
+                });
+            }
+        }
+
+        function applyGraphicsSettings() {
+            if (!renderer) return;
+
+            switch(settings.graphics) {
+                case 'low':
+                    renderer.setPixelRatio(1);
+                    scene.fog = new THREE.Fog(0x000000, 30, 150);
+                    break;
+                case 'medium':
+                    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.5));
+                    scene.fog = new THREE.Fog(0x000000, 50, 200);
+                    break;
+                case 'high':
+                    renderer.setPixelRatio(window.devicePixelRatio);
+                    scene.fog = new THREE.Fog(0x000000, 70, 250);
+                    break;
+            }
+        }
+
+        // Toggle functions
+        function toggleSettings() {
+            const panel = document.getElementById('settings-panel');
+            const isVisible = panel.style.display === 'block';
+            panel.style.display = isVisible ? 'none' : 'block';
+            if (!isVisible && !gameOver) {
+                paused = true;
+            } else if (isVisible && !gameOver) {
+                paused = false;
+            }
+        }
+
+        function toggleHelp() {
+            const overlay = document.getElementById('help-overlay');
+            const isVisible = overlay.style.display === 'block';
+            overlay.style.display = isVisible ? 'none' : 'block';
+            if (!isVisible && !gameOver) {
+                paused = true;
+            } else if (isVisible && !gameOver) {
+                paused = false;
+            }
+        }
+
+        function togglePause() {
+            if (gameOver) return;
+            paused = !paused;
+            document.getElementById('pause-overlay').style.display = paused ? 'block' : 'none';
+        }
+
+        function toggleFPS() {
+            fpsCounter.enabled = !fpsCounter.enabled;
+            document.getElementById('fps-counter').style.display = fpsCounter.enabled ? 'block' : 'none';
+        }
+
+        function updateFPS() {
+            if (!fpsCounter.enabled) return;
+
+            fpsCounter.frames++;
+            const currentTime = performance.now();
+            const delta = currentTime - fpsCounter.lastTime;
+
+            if (delta >= 1000) {
+                fpsCounter.fps = Math.round((fpsCounter.frames * 1000) / delta);
+                document.getElementById('fps-value').textContent = fpsCounter.fps;
+                fpsCounter.frames = 0;
+                fpsCounter.lastTime = currentTime;
+            }
+        }
+
         function init() {
+            // Initialize Three.js
             scene = new THREE.Scene();
             scene.fog = new THREE.Fog(0x000000, 50, 200);
 
@@ -85,15 +675,94 @@ Classic space shooter game in 3D with enemies and power-ups.
             createPlayer();
             createStarfield();
             createLighting();
+            setupEventListeners();
+            setupTouchControls();
 
-            document.addEventListener('keydown', (e) => {
-                keys[e.key] = true;
-                if (e.key === 'r' || e.key === 'R') restart();
-            });
-            document.addEventListener('keyup', (e) => keys[e.key] = false);
-            window.addEventListener('resize', onResize);
+            // Apply initial graphics settings
+            applyGraphicsSettings();
+
+            // Load high score
+            loadHighScore();
+
+            // Hide loading screen
+            setTimeout(() => {
+                document.getElementById('loading').classList.add('hidden');
+            }, 500);
 
             animate();
+        }
+
+        function setupEventListeners() {
+            document.addEventListener('keydown', (e) => {
+                keys[e.key] = true;
+
+                // Prevent default for game keys
+                if ([' ', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.key)) {
+                    e.preventDefault();
+                }
+
+                // Shortcuts
+                if (e.key === 'r' || e.key === 'R') restart();
+                if (e.key === 'p' || e.key === 'P') togglePause();
+                if (e.key === 'f' || e.key === 'F') toggleFPS();
+                if (e.key === 'h' || e.key === 'H') toggleHelp();
+                if (e.key === 'Escape') toggleSettings();
+            });
+
+            document.addEventListener('keyup', (e) => keys[e.key] = false);
+            window.addEventListener('resize', onResize);
+        }
+
+        function setupTouchControls() {
+            const joystick = document.getElementById('joystick');
+            const shootBtn = document.getElementById('shoot-btn');
+
+            if (!joystick || !shootBtn) return;
+
+            // Joystick controls
+            joystick.addEventListener('touchstart', handleJoystickStart, { passive: false });
+            joystick.addEventListener('touchmove', handleJoystickMove, { passive: false });
+            joystick.addEventListener('touchend', handleJoystickEnd, { passive: false });
+
+            // Shoot button
+            shootBtn.addEventListener('touchstart', (e) => {
+                e.preventDefault();
+                touchState.shoot = true;
+            }, { passive: false });
+
+            shootBtn.addEventListener('touchend', (e) => {
+                e.preventDefault();
+                touchState.shoot = false;
+            }, { passive: false });
+        }
+
+        function handleJoystickStart(e) {
+            e.preventDefault();
+            touchState.joystick.active = true;
+        }
+
+        function handleJoystickMove(e) {
+            if (!touchState.joystick.active) return;
+            e.preventDefault();
+
+            const touch = e.touches[0];
+            const rect = e.target.getBoundingClientRect();
+            const centerX = rect.left + rect.width / 2;
+            const centerY = rect.top + rect.height / 2;
+
+            touchState.joystick.x = (touch.clientX - centerX) / (rect.width / 2);
+            touchState.joystick.y = (touch.clientY - centerY) / (rect.height / 2);
+
+            // Clamp values
+            touchState.joystick.x = Math.max(-1, Math.min(1, touchState.joystick.x));
+            touchState.joystick.y = Math.max(-1, Math.min(1, touchState.joystick.y));
+        }
+
+        function handleJoystickEnd(e) {
+            e.preventDefault();
+            touchState.joystick.active = false;
+            touchState.joystick.x = 0;
+            touchState.joystick.y = 0;
         }
 
         function createPlayer() {
@@ -124,7 +793,9 @@ Classic space shooter game in 3D with enemies and power-ups.
             });
 
             const starsVertices = [];
-            for (let i = 0; i < 1000; i++) {
+            const starCount = settings.graphics === 'low' ? 500 : settings.graphics === 'medium' ? 1000 : 1500;
+
+            for (let i = 0; i < starCount; i++) {
                 const x = (Math.random() - 0.5) * 200;
                 const y = (Math.random() - 0.5) * 200;
                 const z = (Math.random() - 0.5) * 200 - 50;
@@ -163,6 +834,8 @@ Classic space shooter game in 3D with enemies and power-ups.
         }
 
         function spawnEnemy() {
+            const diff = difficulties[settings.difficulty];
+
             const geometry = new THREE.OctahedronGeometry(0.8, 0);
             const material = new THREE.MeshPhongMaterial({
                 color: 0xff0088,
@@ -176,23 +849,32 @@ Classic space shooter game in 3D with enemies and power-ups.
                 (Math.random() - 0.5) * 10,
                 -30
             );
-            enemy.velocity = 0.1 + Math.random() * 0.15;
-            enemy.health = 1;
+            enemy.velocity = (0.1 + Math.random() * 0.15) * diff.enemySpeed;
+            enemy.health = diff.enemyHealth;
 
             scene.add(enemy);
             enemies.push(enemy);
         }
 
         function updateGame() {
-            if (gameOver) return;
+            if (gameOver || paused) return;
 
-            // Player movement
+            const diff = difficulties[settings.difficulty];
+
+            // Player movement (keyboard)
             const speed = 0.3;
             if (keys['ArrowLeft']) player.position.x -= speed;
             if (keys['ArrowRight']) player.position.x += speed;
             if (keys['ArrowUp']) player.position.y += speed;
             if (keys['ArrowDown']) player.position.y -= speed;
             if (keys[' ']) shoot();
+
+            // Player movement (touch)
+            if (touchState.joystick.active) {
+                player.position.x += touchState.joystick.x * speed;
+                player.position.y -= touchState.joystick.y * speed;
+            }
+            if (touchState.shoot) shoot();
 
             // Clamp player position
             player.position.x = Math.max(-10, Math.min(10, player.position.x));
@@ -219,7 +901,7 @@ Classic space shooter game in 3D with enemies and power-ups.
                 // Check collision with player
                 const dist = player.position.distanceTo(enemy.position);
                 if (dist < 1.5) {
-                    health -= 10;
+                    health -= diff.damage;
                     updateHUD();
                     scene.remove(enemy);
                     enemies.splice(i, 1);
@@ -264,16 +946,17 @@ Classic space shooter game in 3D with enemies and power-ups.
             }
 
             // Spawn enemies
-            if (Math.random() < 0.02 && enemies.length < 10) {
+            if (Math.random() < diff.spawnRate && enemies.length < 10) {
                 spawnEnemy();
             }
         }
 
         function createExplosion(position) {
-            const particlesCount = 20;
+            const particlesCount = settings.graphics === 'low' ? 10 : settings.graphics === 'medium' ? 20 : 30;
+
             for (let i = 0; i < particlesCount; i++) {
                 const geometry = new THREE.SphereGeometry(0.1, 4, 4);
-                const material = new THREE.MeshBasicMaterial({ color: 0xff8800 });
+                const material = new THREE.MeshBasicMaterial({ color: 0xff8800, transparent: true });
                 const particle = new THREE.Mesh(geometry, material);
 
                 particle.position.copy(position);
@@ -309,6 +992,8 @@ Classic space shooter game in 3D with enemies and power-ups.
 
         function endGame() {
             gameOver = true;
+            saveHighScore();
+            document.getElementById('final-score-value').textContent = score;
             document.getElementById('gameover').style.display = 'block';
         }
 
@@ -323,10 +1008,12 @@ Classic space shooter game in 3D with enemies and power-ups.
             score = 0;
             health = 100;
             gameOver = false;
+            paused = false;
 
             player.position.set(0, 0, 0);
             updateHUD();
             document.getElementById('gameover').style.display = 'none';
+            document.getElementById('pause-overlay').style.display = 'none';
         }
 
         function onResize() {
@@ -339,12 +1026,16 @@ Classic space shooter game in 3D with enemies and power-ups.
             requestAnimationFrame(animate);
 
             updateGame();
+            updateFPS();
 
             renderer.render(scene, camera);
         }
 
-        init();
-        updateHUD();
+        // Initialize game when page loads
+        window.addEventListener('load', () => {
+            init();
+            updateHUD();
+        });
     </script>
 </body>
 </html>
