@@ -223,98 +223,112 @@
                     name: 'Cube Spinner',
                     icon: '🎲',
                     desc: 'Interactive rotating cube with mouse control',
-                    file: 'cube-spinner.md'
+                    file: 'cube-spinner/index.html',
+                    category: 'interactive'
                 },
                 {
                     id: 'particle-system',
                     name: 'Particle Storm',
                     icon: '✨',
                     desc: 'Interactive particle system with physics',
-                    file: 'particle-system.md'
+                    file: 'particle-system/index.html',
+                    category: 'simulation'
                 },
                 {
                     id: 'space-shooter',
                     name: 'Space Shooter',
                     icon: '🚀',
                     desc: 'Classic space shooter in 3D',
-                    file: 'space-shooter.md'
+                    file: 'space-shooter/index.html',
+                    category: 'arcade'
                 },
                 {
                     id: 'terrain-explorer',
                     name: 'Terrain Explorer',
                     icon: '🏔️',
                     desc: 'Navigate procedural 3D terrain',
-                    file: 'terrain-explorer.md'
+                    file: 'terrain-explorer/index.html',
+                    category: 'exploration'
                 },
                 {
                     id: 'neural-network-viz',
                     name: 'Neural Network',
                     icon: '🧠',
                     desc: 'Visualize AI neural network training',
-                    file: 'neural-network-viz.md'
+                    file: 'neural-network-viz/index.html',
+                    category: 'visualization'
                 },
                 {
                     id: 'block-breaker',
                     name: 'Block Breaker 3D',
                     icon: '🧱',
                     desc: 'Break blocks in 3D space',
-                    file: 'block-breaker.md'
+                    file: 'block-breaker/index.html',
+                    category: 'arcade'
                 },
                 {
                     id: 'fractal-explorer',
                     name: 'Fractal Explorer',
                     icon: '🌀',
                     desc: 'Explore infinite fractal patterns',
-                    file: 'fractal-explorer.md'
+                    file: 'fractal-explorer/index.html',
+                    category: 'visualization'
                 },
                 {
                     id: 'konomi-os',
                     name: 'Konomi OS',
                     icon: '🖥️',
                     desc: 'Full 3D Operating System with AI',
-                    file: 'konomi-os.md'
+                    file: 'konomi-os/index.html',
+                    category: 'simulation'
                 },
                 {
                     id: 'maze-runner',
                     name: 'Maze Runner',
                     icon: '🧭',
                     desc: 'First-person procedural maze exploration',
-                    file: 'maze-runner.md'
+                    file: 'maze-runner/index.html',
+                    category: 'exploration'
                 },
                 {
                     id: 'tower-defense',
                     name: 'Tower Defense',
                     icon: '⚔️',
                     desc: 'Strategic 3D tower defense with waves',
-                    file: 'tower-defense.md'
+                    file: 'tower-defense/index.html',
+                    category: 'strategy'
                 },
                 {
                     id: 'physics-sandbox',
                     name: 'Physics Sandbox',
                     icon: '🎮',
                     desc: 'Interactive physics playground',
-                    file: 'physics-sandbox.md'
+                    file: 'physics-sandbox/index.html',
+                    category: 'simulation'
                 },
                 {
                     id: 'neon-racer',
                     name: 'Neon Racer',
                     icon: '🏎️',
                     desc: 'Futuristic high-speed racing game',
-                    file: 'neon-racer.md'
+                    file: 'neon-racer/index.html',
+                    category: 'racing'
                 },
                 {
                     id: 'music-visualizer',
                     name: 'Music Visualizer',
                     icon: '🎵',
                     desc: 'Audio-reactive 3D visualization',
-                    file: 'music-visualizer.md'
+                    file: 'music-visualizer/index.html',
+                    category: 'visualization'
                 },
                 {
                     id: 'city-builder',
                     name: 'City Builder',
                     icon: '🏙️',
                     desc: 'Build and manage your 3D city',
-                    file: 'city-builder.md'
+                    file: 'city-builder/index.html',
+                    category: 'strategy'
                 }
             ],
 
@@ -362,19 +376,26 @@
                 });
 
                 try {
-                    // Fetch the markdown file
-                    const response = await fetch(game.file);
-                    if (!response.ok) throw new Error('Game file not found');
+                    // Check if file is direct HTML (new structure) or markdown (legacy)
+                    const isDirectHTML = game.file.endsWith('.html');
 
-                    const mdContent = await response.text();
-
-                    // Extract HTML from markdown code block
-                    const htmlMatch = mdContent.match(/```html\n([\s\S]*?)\n```/);
-                    if (!htmlMatch) {
-                        // If no code block, use the entire content
-                        this.displayGame(mdContent, game);
+                    if (isDirectHTML) {
+                        // New structure: load game in iframe directly
+                        this.displayGameIframe(game);
                     } else {
-                        this.displayGame(htmlMatch[1], game);
+                        // Legacy: Fetch the markdown file
+                        const response = await fetch(game.file);
+                        if (!response.ok) throw new Error('Game file not found');
+
+                        const mdContent = await response.text();
+
+                        // Extract HTML from markdown code block
+                        const htmlMatch = mdContent.match(/```html\n([\s\S]*?)\n```/);
+                        if (!htmlMatch) {
+                            this.displayGame(mdContent, game);
+                        } else {
+                            this.displayGame(htmlMatch[1], game);
+                        }
                     }
                 } catch (error) {
                     console.error('Error loading game:', error);
@@ -386,6 +407,28 @@
                         </div>
                     `;
                 }
+            },
+
+            displayGameIframe(game) {
+                const content = document.getElementById('content');
+
+                // Remove old iframes
+                content.querySelectorAll('.game-frame').forEach(frame => frame.remove());
+
+                // Create new iframe pointing to the game's index.html
+                const iframe = document.createElement('iframe');
+                iframe.className = 'game-frame active';
+                iframe.src = game.file;
+                iframe.sandbox = 'allow-scripts allow-same-origin';
+
+                content.appendChild(iframe);
+
+                this.currentGame = game;
+                document.getElementById('loading').style.display = 'none';
+                document.getElementById('fullscreenBtn').style.display = 'block';
+                document.getElementById('stats').style.display = 'block';
+
+                this.updateStats(game);
             },
 
             displayGame(html, game) {
@@ -417,9 +460,11 @@
 
             updateStats(game) {
                 const statsText = document.getElementById('statsText');
+                const category = game.category ? `[${game.category}]` : '';
                 statsText.innerHTML = `
-                    <strong>${game.icon} ${game.name}</strong><br>
-                    ${game.desc}
+                    <strong>${game.icon} ${game.name}</strong> ${category}<br>
+                    ${game.desc}<br>
+                    <small style="color: #88ff88;">Path: ${game.file}</small>
                 `;
             },
 
