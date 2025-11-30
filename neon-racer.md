@@ -1,19 +1,89 @@
 # Neon Racer 3D
 
-High-speed futuristic racing game with neon aesthetics and procedural tracks.
+High-speed futuristic racing game with neon aesthetics and procedural tracks. Enhanced with loading screen, pause/resume, FPS counter, settings panel, mobile controls, and best lap tracking.
 
 ```html
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="description" content="Neon Racer 3D - High-speed futuristic racing game with neon aesthetics and procedural tracks. Race through a cyberpunk world!">
+    <meta name="keywords" content="neon racer, 3d racing game, cyberpunk racing, futuristic racing, webgl game">
+    <meta name="author" content="Neon Racer">
+
+    <!-- Open Graph / Facebook -->
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="">
+    <meta property="og:title" content="Neon Racer 3D - Futuristic Racing Game">
+    <meta property="og:description" content="High-speed futuristic racing game with neon aesthetics and procedural tracks. Race through a cyberpunk world!">
+    <meta property="og:image" content="">
+
+    <!-- Twitter -->
+    <meta property="twitter:card" content="summary_large_image">
+    <meta property="twitter:url" content="">
+    <meta property="twitter:title" content="Neon Racer 3D - Futuristic Racing Game">
+    <meta property="twitter:description" content="High-speed futuristic racing game with neon aesthetics and procedural tracks. Race through a cyberpunk world!">
+    <meta property="twitter:image" content="">
+
     <title>Neon Racer 3D</title>
     <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
         body {
             margin: 0;
             overflow: hidden;
             font-family: 'Courier New', monospace;
             background: #000;
+            touch-action: none;
         }
+
+        /* Loading Screen */
+        #loading-screen {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: #000;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+            color: #00ff88;
+        }
+
+        #loading-screen.hidden {
+            display: none;
+        }
+
+        .spinner {
+            width: 60px;
+            height: 60px;
+            border: 4px solid rgba(0, 255, 136, 0.2);
+            border-top: 4px solid #00ff88;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-bottom: 20px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .loading-text {
+            font-size: 24px;
+            text-shadow: 0 0 10px #00ff88;
+            margin-top: 10px;
+        }
+
+        /* HUD Elements */
         #hud {
             position: absolute;
             top: 0;
@@ -22,99 +92,544 @@ High-speed futuristic racing game with neon aesthetics and procedural tracks.
             padding: 20px;
             display: flex;
             justify-content: space-between;
-            color: #00ffff;
+            color: #00ff88;
             font-size: 20px;
-            text-shadow: 0 0 10px #00ffff;
+            text-shadow: 0 0 10px #00ff88;
             z-index: 100;
             pointer-events: none;
         }
+
         .hud-item {
             background: rgba(0, 0, 0, 0.7);
             padding: 10px 20px;
-            border: 2px solid #00ffff;
+            border: 2px solid #00ff88;
             border-radius: 8px;
+            box-shadow: 0 0 15px rgba(0, 255, 136, 0.3);
         }
+
         #speedometer {
             position: absolute;
-            bottom: 20px;
+            bottom: 100px;
             left: 50%;
             transform: translateX(-50%);
             font-size: 48px;
-            color: #ff00ff;
-            text-shadow: 0 0 20px #ff00ff;
+            color: #00ff88;
+            text-shadow: 0 0 20px #00ff88;
             font-weight: bold;
             z-index: 100;
+            pointer-events: none;
         }
+
+        #fps-counter {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            background: rgba(0, 0, 0, 0.7);
+            padding: 10px 15px;
+            border: 2px solid #00ff88;
+            border-radius: 8px;
+            color: #00ff88;
+            font-size: 16px;
+            text-shadow: 0 0 10px #00ff88;
+            z-index: 100;
+            box-shadow: 0 0 15px rgba(0, 255, 136, 0.3);
+        }
+
+        #fps-counter.hidden {
+            display: none;
+        }
+
+        /* Start Screen */
         #controls {
             position: absolute;
             top: 50%;
             left: 50%;
             transform: translate(-50%, -50%);
             text-align: center;
-            color: #00ffff;
+            color: #00ff88;
             font-size: 16px;
             background: rgba(0, 0, 0, 0.9);
             padding: 30px;
-            border: 3px solid #00ffff;
+            border: 3px solid #00ff88;
             border-radius: 15px;
             z-index: 200;
+            box-shadow: 0 0 30px rgba(0, 255, 136, 0.5);
+            max-width: 500px;
         }
+
         #controls.hidden {
             display: none;
         }
+
         .key {
             display: inline-block;
             padding: 8px 12px;
             margin: 5px;
-            background: rgba(0, 255, 255, 0.2);
-            border: 2px solid #00ffff;
+            background: rgba(0, 255, 136, 0.2);
+            border: 2px solid #00ff88;
             border-radius: 5px;
+            box-shadow: 0 0 10px rgba(0, 255, 136, 0.3);
         }
+
         #startBtn {
             margin-top: 20px;
             padding: 15px 40px;
             font-size: 20px;
-            background: rgba(255, 0, 255, 0.3);
-            border: 3px solid #ff00ff;
-            color: #ff00ff;
+            background: rgba(0, 255, 136, 0.3);
+            border: 3px solid #00ff88;
+            color: #00ff88;
             border-radius: 10px;
             cursor: pointer;
             font-family: 'Courier New', monospace;
             font-weight: bold;
+            transition: all 0.3s;
+            box-shadow: 0 0 20px rgba(0, 255, 136, 0.4);
         }
+
         #startBtn:hover {
-            background: rgba(255, 0, 255, 0.5);
+            background: rgba(0, 255, 136, 0.5);
+            box-shadow: 0 0 30px rgba(0, 255, 136, 0.6);
+        }
+
+        /* Pause Screen */
+        #pause-screen {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            text-align: center;
+            color: #00ff88;
+            font-size: 24px;
+            background: rgba(0, 0, 0, 0.95);
+            padding: 40px;
+            border: 3px solid #00ff88;
+            border-radius: 15px;
+            z-index: 300;
+            box-shadow: 0 0 30px rgba(0, 255, 136, 0.5);
+        }
+
+        #pause-screen.hidden {
+            display: none;
+        }
+
+        /* Settings Panel */
+        #settings-panel {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(0, 0, 0, 0.95);
+            padding: 30px;
+            border: 3px solid #00ff88;
+            border-radius: 15px;
+            z-index: 400;
+            color: #00ff88;
+            min-width: 400px;
+            max-width: 500px;
+            box-shadow: 0 0 30px rgba(0, 255, 136, 0.5);
+        }
+
+        #settings-panel.hidden {
+            display: none;
+        }
+
+        .setting-item {
+            margin: 20px 0;
+        }
+
+        .setting-item label {
+            display: block;
+            margin-bottom: 10px;
+            font-size: 16px;
+            text-shadow: 0 0 5px #00ff88;
+        }
+
+        .setting-item input[type="range"] {
+            width: 100%;
+            height: 8px;
+            background: rgba(0, 255, 136, 0.2);
+            outline: none;
+            border-radius: 5px;
+        }
+
+        .setting-item input[type="range"]::-webkit-slider-thumb {
+            appearance: none;
+            width: 20px;
+            height: 20px;
+            background: #00ff88;
+            cursor: pointer;
+            border-radius: 50%;
+            box-shadow: 0 0 10px #00ff88;
+        }
+
+        .setting-item select {
+            width: 100%;
+            padding: 10px;
+            background: rgba(0, 255, 136, 0.1);
+            border: 2px solid #00ff88;
+            color: #00ff88;
+            font-family: 'Courier New', monospace;
+            border-radius: 5px;
+            font-size: 14px;
+        }
+
+        .setting-item button {
+            padding: 10px 20px;
+            background: rgba(0, 255, 136, 0.3);
+            border: 2px solid #00ff88;
+            color: #00ff88;
+            border-radius: 5px;
+            cursor: pointer;
+            font-family: 'Courier New', monospace;
+            transition: all 0.3s;
+        }
+
+        .setting-item button:hover {
+            background: rgba(0, 255, 136, 0.5);
+            box-shadow: 0 0 15px rgba(0, 255, 136, 0.4);
+        }
+
+        .setting-value {
+            display: inline-block;
+            margin-left: 10px;
+            font-weight: bold;
+        }
+
+        /* Help Overlay */
+        #help-overlay {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(0, 0, 0, 0.95);
+            padding: 30px;
+            border: 3px solid #00ff88;
+            border-radius: 15px;
+            z-index: 500;
+            color: #00ff88;
+            max-width: 600px;
+            box-shadow: 0 0 30px rgba(0, 255, 136, 0.5);
+        }
+
+        #help-overlay.hidden {
+            display: none;
+        }
+
+        .help-section {
+            margin: 15px 0;
+        }
+
+        .help-title {
+            font-size: 20px;
+            margin-bottom: 10px;
+            text-shadow: 0 0 10px #00ff88;
+            font-weight: bold;
+        }
+
+        .help-item {
+            display: flex;
+            justify-content: space-between;
+            margin: 8px 0;
+            padding: 5px;
+        }
+
+        /* Mobile Controls */
+        #mobile-controls {
+            position: absolute;
+            bottom: 20px;
+            left: 0;
+            right: 0;
+            display: none;
+            justify-content: space-around;
+            padding: 0 20px;
+            z-index: 150;
+        }
+
+        #mobile-controls.active {
+            display: flex;
+        }
+
+        .mobile-btn {
+            width: 70px;
+            height: 70px;
+            background: rgba(0, 255, 136, 0.3);
+            border: 3px solid #00ff88;
+            border-radius: 50%;
+            color: #00ff88;
+            font-size: 24px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            user-select: none;
+            box-shadow: 0 0 20px rgba(0, 255, 136, 0.4);
+            transition: all 0.1s;
+        }
+
+        .mobile-btn:active {
+            background: rgba(0, 255, 136, 0.6);
+            transform: scale(0.95);
+        }
+
+        .mobile-dpad {
+            display: grid;
+            grid-template-columns: repeat(3, 70px);
+            grid-template-rows: repeat(3, 70px);
+            gap: 10px;
+        }
+
+        .mobile-dpad .mobile-btn {
+            width: 70px;
+            height: 70px;
+        }
+
+        .mobile-dpad .up { grid-column: 2; grid-row: 1; }
+        .mobile-dpad .left { grid-column: 1; grid-row: 2; }
+        .mobile-dpad .right { grid-column: 3; grid-row: 2; }
+        .mobile-dpad .down { grid-column: 2; grid-row: 3; }
+
+        /* Best Lap Display */
+        #best-lap {
+            position: absolute;
+            bottom: 20px;
+            right: 20px;
+            background: rgba(0, 0, 0, 0.7);
+            padding: 10px 15px;
+            border: 2px solid #00ff88;
+            border-radius: 8px;
+            color: #00ff88;
+            font-size: 16px;
+            text-shadow: 0 0 10px #00ff88;
+            z-index: 100;
+            box-shadow: 0 0 15px rgba(0, 255, 136, 0.3);
+        }
+
+        #best-lap.hidden {
+            display: none;
+        }
+
+        @media (max-width: 768px) {
+            #hud {
+                font-size: 14px;
+                padding: 10px;
+            }
+
+            .hud-item {
+                padding: 5px 10px;
+            }
+
+            #speedometer {
+                font-size: 32px;
+                bottom: 180px;
+            }
+
+            #settings-panel {
+                min-width: 300px;
+                max-width: 90%;
+            }
+
+            #help-overlay {
+                max-width: 90%;
+                font-size: 14px;
+            }
         }
     </style>
 </head>
 <body>
-    <div id="controls">
-        <div style="font-size: 28px; margin-bottom: 20px;">🏎️ NEON RACER</div>
+    <!-- Loading Screen -->
+    <div id="loading-screen">
+        <div class="spinner"></div>
+        <div class="loading-text">LOADING NEON RACER...</div>
+        <div class="loading-text" style="font-size: 16px; margin-top: 10px;">Initializing Three.js</div>
+    </div>
+
+    <!-- Start Screen -->
+    <div id="controls" class="hidden">
+        <div style="font-size: 32px; margin-bottom: 20px; text-shadow: 0 0 20px #00ff88;">NEON RACER</div>
         <div style="margin: 15px 0;">
-            <span class="key">↑ W</span> Accelerate
+            <span class="key">W / ↑</span> Accelerate
         </div>
         <div style="margin: 15px 0;">
-            <span class="key">↓ S</span> Brake
+            <span class="key">S / ↓</span> Brake
         </div>
         <div style="margin: 15px 0;">
-            <span class="key">← A</span> <span class="key">→ D</span> Steer
+            <span class="key">A / ←</span> <span class="key">D / →</span> Steer
         </div>
         <div style="margin: 15px 0;">
             <span class="key">SPACE</span> Boost
         </div>
+        <div style="margin: 15px 0; font-size: 14px; opacity: 0.8;">
+            Press <span class="key">H</span> for more shortcuts
+        </div>
         <button id="startBtn">START RACE</button>
     </div>
 
+    <!-- HUD -->
     <div id="hud" class="hidden">
         <div class="hud-item">LAP: <span id="lap">1/3</span></div>
-        <div class="hud-item">TIME: <span id="time">0:00</span></div>
+        <div class="hud-item">TIME: <span id="time">0:00.0</span></div>
         <div class="hud-item">BOOST: <span id="boost">100%</span></div>
     </div>
 
     <div id="speedometer" class="hidden">0</div>
 
+    <!-- FPS Counter -->
+    <div id="fps-counter" class="hidden">
+        FPS: <span id="fps-value">60</span>
+    </div>
+
+    <!-- Best Lap -->
+    <div id="best-lap" class="hidden">
+        BEST LAP: <span id="best-lap-value">--:--</span>
+    </div>
+
+    <!-- Pause Screen -->
+    <div id="pause-screen" class="hidden">
+        <div style="font-size: 48px; margin-bottom: 20px; text-shadow: 0 0 20px #00ff88;">PAUSED</div>
+        <div style="font-size: 18px; opacity: 0.8;">Press P to resume</div>
+        <div style="font-size: 18px; opacity: 0.8; margin-top: 10px;">Press ESC for settings</div>
+    </div>
+
+    <!-- Settings Panel -->
+    <div id="settings-panel" class="hidden">
+        <h2 style="text-align: center; margin-bottom: 20px; font-size: 24px; text-shadow: 0 0 15px #00ff88;">SETTINGS</h2>
+
+        <div class="setting-item">
+            <label>
+                Steering Sensitivity: <span class="setting-value" id="sensitivity-value">50</span>
+            </label>
+            <input type="range" id="sensitivity-slider" min="10" max="100" value="50">
+        </div>
+
+        <div class="setting-item">
+            <label>Graphics Quality:</label>
+            <select id="quality-select">
+                <option value="low">Low (Better Performance)</option>
+                <option value="medium" selected>Medium</option>
+                <option value="high">High (Better Quality)</option>
+            </select>
+        </div>
+
+        <div class="setting-item">
+            <label>Sound:</label>
+            <button id="sound-toggle">ON</button>
+        </div>
+
+        <div class="setting-item" style="text-align: center; margin-top: 30px;">
+            <button id="close-settings" style="padding: 12px 30px; font-size: 16px;">CLOSE</button>
+        </div>
+    </div>
+
+    <!-- Help Overlay -->
+    <div id="help-overlay" class="hidden">
+        <h2 style="text-align: center; margin-bottom: 20px; font-size: 24px; text-shadow: 0 0 15px #00ff88;">KEYBOARD SHORTCUTS</h2>
+
+        <div class="help-section">
+            <div class="help-title">Racing Controls</div>
+            <div class="help-item"><span>W / ↑</span><span>Accelerate</span></div>
+            <div class="help-item"><span>S / ↓</span><span>Brake</span></div>
+            <div class="help-item"><span>A / ←</span><span>Steer Left</span></div>
+            <div class="help-item"><span>D / →</span><span>Steer Right</span></div>
+            <div class="help-item"><span>SPACE</span><span>Boost</span></div>
+        </div>
+
+        <div class="help-section" style="margin-top: 20px;">
+            <div class="help-title">Game Controls</div>
+            <div class="help-item"><span>P</span><span>Pause / Resume</span></div>
+            <div class="help-item"><span>ESC</span><span>Settings Menu</span></div>
+            <div class="help-item"><span>F</span><span>Toggle FPS Counter</span></div>
+            <div class="help-item"><span>H</span><span>Toggle This Help</span></div>
+        </div>
+
+        <div style="text-align: center; margin-top: 20px;">
+            <button id="close-help" style="padding: 12px 30px; font-size: 16px; background: rgba(0, 255, 136, 0.3); border: 2px solid #00ff88; color: #00ff88; border-radius: 5px; cursor: pointer; font-family: 'Courier New', monospace;">CLOSE</button>
+        </div>
+    </div>
+
+    <!-- Mobile Controls -->
+    <div id="mobile-controls">
+        <div class="mobile-dpad">
+            <div class="mobile-btn up" data-key="w">↑</div>
+            <div class="mobile-btn left" data-key="a">←</div>
+            <div class="mobile-btn right" data-key="d">→</div>
+            <div class="mobile-btn down" data-key="s">↓</div>
+        </div>
+        <div class="mobile-btn" data-key=" " style="width: 90px; height: 90px; font-size: 16px;">BOOST</div>
+    </div>
+
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     <script>
+        // Settings
+        const settings = {
+            steeringSensitivity: 50,
+            graphicsQuality: 'medium',
+            soundEnabled: true
+        };
+
+        // Load settings from localStorage
+        function loadSettings() {
+            const saved = localStorage.getItem('neonRacerSettings');
+            if (saved) {
+                Object.assign(settings, JSON.parse(saved));
+                updateSettingsUI();
+            }
+        }
+
+        function saveSettings() {
+            localStorage.setItem('neonRacerSettings', JSON.stringify(settings));
+        }
+
+        function updateSettingsUI() {
+            document.getElementById('sensitivity-slider').value = settings.steeringSensitivity;
+            document.getElementById('sensitivity-value').textContent = settings.steeringSensitivity;
+            document.getElementById('quality-select').value = settings.graphicsQuality;
+            document.getElementById('sound-toggle').textContent = settings.soundEnabled ? 'ON' : 'OFF';
+        }
+
+        // Settings event listeners
+        document.getElementById('sensitivity-slider').addEventListener('input', (e) => {
+            settings.steeringSensitivity = parseInt(e.target.value);
+            document.getElementById('sensitivity-value').textContent = settings.steeringSensitivity;
+            saveSettings();
+        });
+
+        document.getElementById('quality-select').addEventListener('change', (e) => {
+            settings.graphicsQuality = e.target.value;
+            applyGraphicsQuality();
+            saveSettings();
+        });
+
+        document.getElementById('sound-toggle').addEventListener('click', (e) => {
+            settings.soundEnabled = !settings.soundEnabled;
+            e.target.textContent = settings.soundEnabled ? 'ON' : 'OFF';
+            saveSettings();
+        });
+
+        document.getElementById('close-settings').addEventListener('click', () => {
+            document.getElementById('settings-panel').classList.add('hidden');
+        });
+
+        document.getElementById('close-help').addEventListener('click', () => {
+            document.getElementById('help-overlay').classList.add('hidden');
+        });
+
+        // FPS Counter
+        let fps = 60;
+        let frameCount = 0;
+        let lastTime = performance.now();
+        let showFPS = false;
+
+        function updateFPS() {
+            frameCount++;
+            const currentTime = performance.now();
+            if (currentTime >= lastTime + 1000) {
+                fps = Math.round((frameCount * 1000) / (currentTime - lastTime));
+                document.getElementById('fps-value').textContent = fps;
+                frameCount = 0;
+                lastTime = currentTime;
+            }
+        }
+
         // Scene setup
         const scene = new THREE.Scene();
         scene.fog = new THREE.FogExp2(0x000000, 0.015);
@@ -124,6 +639,23 @@ High-speed futuristic racing game with neon aesthetics and procedural tracks.
         const renderer = new THREE.WebGLRenderer({ antialias: true });
         renderer.setSize(window.innerWidth, window.innerHeight);
         document.body.appendChild(renderer.domElement);
+
+        function applyGraphicsQuality() {
+            switch(settings.graphicsQuality) {
+                case 'low':
+                    renderer.setPixelRatio(1);
+                    scene.fog.density = 0.02;
+                    break;
+                case 'medium':
+                    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.5));
+                    scene.fog.density = 0.015;
+                    break;
+                case 'high':
+                    renderer.setPixelRatio(window.devicePixelRatio);
+                    scene.fog.density = 0.01;
+                    break;
+            }
+        }
 
         // Game state
         const gameState = {
@@ -136,9 +668,42 @@ High-speed futuristic racing game with neon aesthetics and procedural tracks.
             targetLane: 0,
             boost: 100,
             lap: 1,
+            currentLapStartTime: null,
             startTime: null,
-            isPlaying: false
+            isPlaying: false,
+            isPaused: false,
+            lapTimes: []
         };
+
+        // Load best lap time
+        function getBestLapTime() {
+            const saved = localStorage.getItem('neonRacerBestLap');
+            return saved ? parseFloat(saved) : null;
+        }
+
+        function saveBestLapTime(time) {
+            const best = getBestLapTime();
+            if (best === null || time < best) {
+                localStorage.setItem('neonRacerBestLap', time.toString());
+                return true;
+            }
+            return false;
+        }
+
+        function formatTime(ms) {
+            const minutes = Math.floor(ms / 60000);
+            const seconds = Math.floor((ms % 60000) / 1000);
+            const deciseconds = Math.floor((ms % 1000) / 100);
+            return `${minutes}:${seconds.toString().padStart(2, '0')}.${deciseconds}`;
+        }
+
+        function updateBestLapDisplay() {
+            const best = getBestLapTime();
+            if (best !== null) {
+                document.getElementById('best-lap-value').textContent = formatTime(best);
+                document.getElementById('best-lap').classList.remove('hidden');
+            }
+        }
 
         // Track
         const track = {
@@ -148,9 +713,10 @@ High-speed futuristic racing game with neon aesthetics and procedural tracks.
             lanes: 3
         };
 
-        // Colors
+        // Colors - using #00ff88 theme
         const colors = {
-            neon: [0x00ffff, 0xff00ff, 0xffff00, 0x00ff00, 0xff0000]
+            neon: [0x00ff88, 0x00ffaa, 0x00ffcc, 0x00eeff, 0x00ccff],
+            primary: 0x00ff88
         };
 
         class TrackSegment {
@@ -202,8 +768,9 @@ High-speed futuristic racing game with neon aesthetics and procedural tracks.
                     this.meshes.push(barrier);
                 }
 
-                // Random obstacles
-                if (Math.random() > 0.85 && z > 50) {
+                // Random obstacles (fewer in high quality)
+                const obstacleChance = settings.graphicsQuality === 'low' ? 0.90 : 0.85;
+                if (Math.random() > obstacleChance && z > 50) {
                     const obstacleGeometry = new THREE.BoxGeometry(3, 1, 3);
                     const neonColor = colors.neon[Math.floor(Math.random() * colors.neon.length)];
                     const obstacleMaterial = new THREE.MeshBasicMaterial({
@@ -245,7 +812,9 @@ High-speed futuristic racing game with neon aesthetics and procedural tracks.
             const starGeometry = new THREE.BufferGeometry();
             const starVertices = [];
 
-            for (let i = 0; i < 1000; i++) {
+            const starCount = settings.graphicsQuality === 'low' ? 500 : settings.graphicsQuality === 'medium' ? 1000 : 2000;
+
+            for (let i = 0; i < starCount; i++) {
                 const x = (Math.random() - 0.5) * 200;
                 const y = (Math.random() - 0.5) * 200;
                 const z = (Math.random() - 0.5) * 200;
@@ -266,7 +835,7 @@ High-speed futuristic racing game with neon aesthetics and procedural tracks.
 
         // Player ship
         const shipGeometry = new THREE.ConeGeometry(0.5, 2, 4);
-        const shipMaterial = new THREE.MeshBasicMaterial({ color: 0xff00ff, wireframe: true });
+        const shipMaterial = new THREE.MeshBasicMaterial({ color: colors.primary, wireframe: true });
         const ship = new THREE.Mesh(shipGeometry, shipMaterial);
         ship.rotation.x = Math.PI;
         scene.add(ship);
@@ -274,7 +843,7 @@ High-speed futuristic racing game with neon aesthetics and procedural tracks.
         // Ship glow
         const glowGeometry = new THREE.SphereGeometry(0.8, 16, 16);
         const glowMaterial = new THREE.MeshBasicMaterial({
-            color: 0xff00ff,
+            color: colors.primary,
             transparent: true,
             opacity: 0.3
         });
@@ -287,7 +856,7 @@ High-speed futuristic racing game with neon aesthetics and procedural tracks.
             constructor(position) {
                 const geometry = new THREE.SphereGeometry(0.2, 8, 8);
                 const material = new THREE.MeshBasicMaterial({
-                    color: 0xff00ff,
+                    color: colors.primary,
                     transparent: true,
                     opacity: 0.6
                 });
@@ -310,19 +879,90 @@ High-speed futuristic racing game with neon aesthetics and procedural tracks.
 
         // Controls
         const keys = {};
-        document.addEventListener('keydown', (e) => keys[e.key.toLowerCase()] = true);
-        document.addEventListener('keyup', (e) => keys[e.key.toLowerCase()] = false);
 
+        document.addEventListener('keydown', (e) => {
+            const key = e.key.toLowerCase();
+            keys[key] = true;
+
+            // Pause/Resume
+            if (key === 'p' && gameState.isPlaying) {
+                gameState.isPaused = !gameState.isPaused;
+                document.getElementById('pause-screen').classList.toggle('hidden', !gameState.isPaused);
+            }
+
+            // FPS Counter
+            if (key === 'f') {
+                showFPS = !showFPS;
+                document.getElementById('fps-counter').classList.toggle('hidden', !showFPS);
+            }
+
+            // Settings
+            if (key === 'escape') {
+                e.preventDefault();
+                const settingsPanel = document.getElementById('settings-panel');
+                settingsPanel.classList.toggle('hidden');
+                if (!settingsPanel.classList.contains('hidden')) {
+                    gameState.isPaused = true;
+                    document.getElementById('pause-screen').classList.add('hidden');
+                } else if (gameState.isPlaying) {
+                    gameState.isPaused = false;
+                }
+            }
+
+            // Help
+            if (key === 'h') {
+                const helpOverlay = document.getElementById('help-overlay');
+                helpOverlay.classList.toggle('hidden');
+                if (!helpOverlay.classList.contains('hidden') && gameState.isPlaying) {
+                    gameState.isPaused = true;
+                    document.getElementById('pause-screen').classList.add('hidden');
+                } else if (gameState.isPlaying) {
+                    gameState.isPaused = false;
+                }
+            }
+        });
+
+        document.addEventListener('keyup', (e) => {
+            keys[e.key.toLowerCase()] = false;
+        });
+
+        // Mobile controls
+        function isMobileDevice() {
+            return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+        }
+
+        if (isMobileDevice()) {
+            document.getElementById('mobile-controls').classList.add('active');
+
+            // Touch controls
+            document.querySelectorAll('.mobile-btn').forEach(btn => {
+                btn.addEventListener('touchstart', (e) => {
+                    e.preventDefault();
+                    const key = btn.getAttribute('data-key');
+                    keys[key] = true;
+                });
+
+                btn.addEventListener('touchend', (e) => {
+                    e.preventDefault();
+                    const key = btn.getAttribute('data-key');
+                    keys[key] = false;
+                });
+            });
+        }
+
+        // Start button
         document.getElementById('startBtn').addEventListener('click', () => {
             document.getElementById('controls').classList.add('hidden');
             document.getElementById('hud').classList.remove('hidden');
             document.getElementById('speedometer').classList.remove('hidden');
+            updateBestLapDisplay();
             gameState.isPlaying = true;
             gameState.startTime = Date.now();
+            gameState.currentLapStartTime = Date.now();
         });
 
         function updatePlayer() {
-            if (!gameState.isPlaying) return;
+            if (!gameState.isPlaying || gameState.isPaused) return;
 
             // Acceleration
             if (keys['w'] || keys['arrowup']) {
@@ -336,7 +976,8 @@ High-speed futuristic racing game with neon aesthetics and procedural tracks.
                 gameState.speed = Math.max(gameState.speed - gameState.acceleration * 2, 0);
             }
 
-            // Steering
+            // Steering with sensitivity
+            const steerSpeed = 0.1 * (settings.steeringSensitivity / 50);
             if (keys['a'] || keys['arrowleft']) {
                 gameState.targetLane = Math.max(gameState.targetLane - 1, -1);
                 keys['arrowleft'] = false;
@@ -358,17 +999,28 @@ High-speed futuristic racing game with neon aesthetics and procedural tracks.
 
             // Smooth lane transition
             const targetX = gameState.targetLane * 4;
-            gameState.lanePosition += (targetX - gameState.lanePosition) * 0.1;
+            gameState.lanePosition += (targetX - gameState.lanePosition) * (0.1 * (settings.steeringSensitivity / 50));
 
             // Update position
             gameState.position += gameState.speed;
 
             // Lap counter
             if (gameState.position > track.length * 10) {
+                const lapTime = Date.now() - gameState.currentLapStartTime;
+                gameState.lapTimes.push(lapTime);
+
+                // Check if new best lap
+                if (saveBestLapTime(lapTime)) {
+                    updateBestLapDisplay();
+                }
+
                 gameState.lap++;
                 gameState.position = 0;
+                gameState.currentLapStartTime = Date.now();
+
                 if (gameState.lap > 3) {
-                    alert('🏁 Race Complete! Time: ' + document.getElementById('time').textContent);
+                    const bestLap = Math.min(...gameState.lapTimes);
+                    alert('Race Complete!\nTotal Time: ' + formatTime(Date.now() - gameState.startTime) + '\nBest Lap: ' + formatTime(bestLap));
                     location.reload();
                 }
             }
@@ -385,8 +1037,9 @@ High-speed futuristic racing game with neon aesthetics and procedural tracks.
             );
             camera.lookAt(gameState.lanePosition, 1, 0);
 
-            // Create trails
-            if (Math.random() > 0.7) {
+            // Create trails (less in low quality)
+            const trailChance = settings.graphicsQuality === 'low' ? 0.85 : 0.7;
+            if (Math.random() > trailChance) {
                 trails.push(new Trail(ship.position.clone()));
             }
 
@@ -396,37 +1049,39 @@ High-speed futuristic racing game with neon aesthetics and procedural tracks.
             document.getElementById('boost').textContent = Math.floor(gameState.boost) + '%';
 
             const elapsed = Date.now() - gameState.startTime;
-            const minutes = Math.floor(elapsed / 60000);
-            const seconds = Math.floor((elapsed % 60000) / 1000);
-            document.getElementById('time').textContent = `${minutes}:${seconds.toString().padStart(2, '0')}`;
+            document.getElementById('time').textContent = formatTime(elapsed);
         }
 
         // Animation loop
         function animate() {
             requestAnimationFrame(animate);
 
-            updatePlayer();
+            updateFPS();
 
-            // Update track
-            track.segments.forEach(segment => {
-                segment.update(gameState.position);
-            });
+            if (!gameState.isPaused) {
+                updatePlayer();
 
-            // Update trails
-            for (let i = trails.length - 1; i >= 0; i--) {
-                if (!trails[i].update()) {
-                    trails.splice(i, 1);
+                // Update track
+                track.segments.forEach(segment => {
+                    segment.update(gameState.position);
+                });
+
+                // Update trails
+                for (let i = trails.length - 1; i >= 0; i--) {
+                    if (!trails[i].update()) {
+                        trails.splice(i, 1);
+                    }
                 }
+
+                // Rotate stars
+                stars.forEach(star => {
+                    star.rotation.y += 0.0001;
+                    star.rotation.x += 0.0001;
+                });
+
+                // Pulse glow
+                glow.scale.setScalar(1 + Math.sin(Date.now() * 0.01) * 0.2);
             }
-
-            // Rotate stars
-            stars.forEach(star => {
-                star.rotation.y += 0.0001;
-                star.rotation.x += 0.0001;
-            });
-
-            // Pulse glow
-            glow.scale.setScalar(1 + Math.sin(Date.now() * 0.01) * 0.2);
 
             renderer.render(scene, camera);
         }
@@ -439,9 +1094,20 @@ High-speed futuristic racing game with neon aesthetics and procedural tracks.
         });
 
         // Initialize
-        generateTrack();
-        createStars();
-        animate();
+        window.addEventListener('load', () => {
+            loadSettings();
+            applyGraphicsQuality();
+            generateTrack();
+            createStars();
+
+            // Hide loading screen
+            setTimeout(() => {
+                document.getElementById('loading-screen').classList.add('hidden');
+                document.getElementById('controls').classList.remove('hidden');
+            }, 1000);
+
+            animate();
+        });
     </script>
 </body>
 </html>
