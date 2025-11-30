@@ -1,14 +1,78 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-    <title>Tower Defense 3D</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="description" content="Tower Defense 3D - Strategic tower defense game in full 3D with multiple tower types and enemy waves. Build towers, defend your base, and survive the onslaught!">
+    <meta name="theme-color" content="#00ff88">
+
+    <!-- Open Graph / Social Media -->
+    <meta property="og:type" content="website">
+    <meta property="og:title" content="Tower Defense 3D - Neon Cyberpunk Strategy Game">
+    <meta property="og:description" content="Strategic tower defense game in full 3D with multiple tower types and enemy waves. Build towers, defend your base!">
+    <meta property="og:image" content="https://via.placeholder.com/1200x630/001122/00ff88?text=Tower+Defense+3D">
+
+    <!-- Twitter Card -->
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="Tower Defense 3D - Neon Cyberpunk Strategy Game">
+    <meta name="twitter:description" content="Strategic tower defense game in full 3D with multiple tower types and enemy waves.">
+
+    <title>Tower Defense 3D - Neon Cyberpunk Strategy</title>
     <style>
+        * {
+            box-sizing: border-box;
+        }
+
         body {
             margin: 0;
             overflow: hidden;
             font-family: 'Courier New', monospace;
             background: #000;
+            touch-action: none;
         }
+
+        /* Loading Screen */
+        #loadingScreen {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: #001122;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 9999;
+            transition: opacity 0.5s;
+        }
+
+        #loadingScreen.hidden {
+            opacity: 0;
+            pointer-events: none;
+        }
+
+        .spinner {
+            width: 60px;
+            height: 60px;
+            border: 4px solid rgba(0, 255, 136, 0.1);
+            border-top: 4px solid #00ff88;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .loading-text {
+            color: #00ff88;
+            margin-top: 20px;
+            font-size: 18px;
+            text-shadow: 0 0 10px rgba(0, 255, 136, 0.5);
+        }
+
         #hud {
             position: absolute;
             top: 10px;
@@ -20,7 +84,42 @@
             border-radius: 8px;
             font-size: 14px;
             z-index: 100;
+            box-shadow: 0 0 20px rgba(0, 255, 136, 0.3);
         }
+
+        #fpsCounter {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            color: #00ff88;
+            background: rgba(0, 0, 0, 0.9);
+            padding: 10px 15px;
+            border: 2px solid #00ff88;
+            border-radius: 8px;
+            font-size: 12px;
+            z-index: 100;
+            display: none;
+            box-shadow: 0 0 20px rgba(0, 255, 136, 0.3);
+        }
+
+        #fpsCounter.visible {
+            display: block;
+        }
+
+        #highScore {
+            position: absolute;
+            top: 70px;
+            right: 10px;
+            color: #ffc800;
+            background: rgba(0, 0, 0, 0.9);
+            padding: 10px 15px;
+            border: 2px solid #ffc800;
+            border-radius: 8px;
+            font-size: 12px;
+            z-index: 100;
+            box-shadow: 0 0 20px rgba(255, 200, 0, 0.3);
+        }
+
         #towers {
             position: absolute;
             bottom: 10px;
@@ -28,7 +127,10 @@
             display: flex;
             gap: 10px;
             z-index: 100;
+            flex-wrap: wrap;
+            max-width: calc(100vw - 20px);
         }
+
         .tower-btn {
             background: rgba(0, 255, 136, 0.2);
             border: 2px solid #00ff88;
@@ -39,19 +141,27 @@
             font-family: 'Courier New', monospace;
             font-size: 12px;
             transition: all 0.3s;
+            text-align: center;
+            user-select: none;
+            box-shadow: 0 0 15px rgba(0, 255, 136, 0.2);
         }
+
         .tower-btn:hover {
             background: rgba(0, 255, 136, 0.4);
             transform: translateY(-2px);
+            box-shadow: 0 0 25px rgba(0, 255, 136, 0.4);
         }
+
         .tower-btn.selected {
             background: rgba(0, 255, 136, 0.6);
-            box-shadow: 0 0 15px rgba(0, 255, 136, 0.5);
+            box-shadow: 0 0 30px rgba(0, 255, 136, 0.6);
         }
+
         .tower-btn.disabled {
             opacity: 0.3;
             cursor: not-allowed;
         }
+
         #startBtn {
             position: absolute;
             top: 10px;
@@ -66,21 +176,284 @@
             font-size: 16px;
             font-weight: bold;
             z-index: 100;
+            box-shadow: 0 0 20px rgba(255, 200, 0, 0.3);
+            transition: all 0.3s;
         }
+
         #startBtn:hover {
             background: rgba(255, 200, 0, 0.5);
+            box-shadow: 0 0 30px rgba(255, 200, 0, 0.5);
+        }
+
+        /* Pause Overlay */
+        #pauseOverlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 17, 34, 0.9);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+        }
+
+        #pauseOverlay.visible {
+            display: flex;
+        }
+
+        .pause-content {
+            color: #00ff88;
+            text-align: center;
+            font-size: 48px;
+            text-shadow: 0 0 20px rgba(0, 255, 136, 0.5);
+        }
+
+        /* Settings Panel */
+        #settingsPanel {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(0, 0, 0, 0.95);
+            border: 3px solid #00ff88;
+            border-radius: 12px;
+            padding: 30px;
+            color: #00ff88;
+            z-index: 1001;
+            display: none;
+            min-width: 400px;
+            max-width: 90vw;
+            box-shadow: 0 0 40px rgba(0, 255, 136, 0.4);
+        }
+
+        #settingsPanel.visible {
+            display: block;
+        }
+
+        .settings-title {
+            font-size: 24px;
+            margin-bottom: 20px;
+            text-align: center;
+            text-shadow: 0 0 15px rgba(0, 255, 136, 0.5);
+        }
+
+        .setting-group {
+            margin: 20px 0;
+            padding: 15px;
+            border: 1px solid rgba(0, 255, 136, 0.3);
+            border-radius: 8px;
+        }
+
+        .setting-label {
+            display: block;
+            margin-bottom: 10px;
+            font-size: 14px;
+        }
+
+        .setting-buttons {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        .setting-btn {
+            background: rgba(0, 255, 136, 0.2);
+            border: 2px solid #00ff88;
+            color: #00ff88;
+            padding: 10px 20px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-family: 'Courier New', monospace;
+            transition: all 0.3s;
+        }
+
+        .setting-btn:hover {
+            background: rgba(0, 255, 136, 0.4);
+        }
+
+        .setting-btn.active {
+            background: rgba(0, 255, 136, 0.6);
+            box-shadow: 0 0 15px rgba(0, 255, 136, 0.5);
+        }
+
+        .close-settings {
+            margin-top: 20px;
+            width: 100%;
+            background: rgba(255, 200, 0, 0.3);
+            border: 2px solid #ffc800;
+            color: #ffc800;
+            padding: 12px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-family: 'Courier New', monospace;
+            font-size: 16px;
+            transition: all 0.3s;
+        }
+
+        .close-settings:hover {
+            background: rgba(255, 200, 0, 0.5);
+        }
+
+        /* Help Overlay */
+        #helpOverlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 17, 34, 0.95);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 1002;
+        }
+
+        #helpOverlay.visible {
+            display: flex;
+        }
+
+        .help-content {
+            background: rgba(0, 0, 0, 0.95);
+            border: 3px solid #00ff88;
+            border-radius: 12px;
+            padding: 30px;
+            color: #00ff88;
+            max-width: 600px;
+            max-height: 80vh;
+            overflow-y: auto;
+            box-shadow: 0 0 40px rgba(0, 255, 136, 0.4);
+        }
+
+        .help-title {
+            font-size: 28px;
+            margin-bottom: 20px;
+            text-align: center;
+            text-shadow: 0 0 15px rgba(0, 255, 136, 0.5);
+        }
+
+        .help-section {
+            margin: 15px 0;
+        }
+
+        .help-section h3 {
+            color: #ffc800;
+            margin-bottom: 10px;
+            font-size: 18px;
+        }
+
+        .help-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 8px;
+            margin: 5px 0;
+            background: rgba(0, 255, 136, 0.1);
+            border-radius: 4px;
+        }
+
+        .help-key {
+            font-weight: bold;
+            color: #ffc800;
+        }
+
+        /* Mobile Controls */
+        #mobileControls {
+            position: absolute;
+            bottom: 10px;
+            right: 10px;
+            display: none;
+            flex-direction: column;
+            gap: 10px;
+            z-index: 100;
+        }
+
+        @media (max-width: 768px) {
+            #mobileControls {
+                display: flex;
+            }
+
+            #towers {
+                bottom: 80px;
+            }
+
+            .tower-btn {
+                padding: 10px;
+                font-size: 10px;
+            }
+
+            #settingsPanel {
+                min-width: 90vw;
+                padding: 20px;
+            }
+        }
+
+        .mobile-btn {
+            background: rgba(0, 255, 136, 0.3);
+            border: 2px solid #00ff88;
+            color: #00ff88;
+            padding: 15px;
+            border-radius: 50%;
+            cursor: pointer;
+            font-size: 20px;
+            width: 60px;
+            height: 60px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 0 15px rgba(0, 255, 136, 0.3);
+            user-select: none;
+        }
+
+        .mobile-btn:active {
+            background: rgba(0, 255, 136, 0.6);
+        }
+
+        /* Health Bar */
+        .health-bar-container {
+            position: absolute;
+            width: 30px;
+            height: 4px;
+            background: rgba(255, 0, 0, 0.3);
+            border-radius: 2px;
+            overflow: hidden;
+        }
+
+        .health-bar {
+            height: 100%;
+            background: linear-gradient(90deg, #ff0000, #00ff88);
+            transition: width 0.2s;
         }
     </style>
 </head>
 <body>
-    <div id="hud">
-        <div>⚔️ TOWER DEFENSE</div>
-        <div style="font-size: 11px; margin-top: 5px;">Wave: <span id="wave">0</span></div>
-        <div style="font-size: 11px;">Gold: <span id="gold">500</span>💰</div>
-        <div style="font-size: 11px;">Lives: <span id="lives">20</span>❤️</div>
-        <div style="font-size: 11px; margin-top: 5px;">Enemies: <span id="enemies">0</span></div>
+    <!-- Loading Screen -->
+    <div id="loadingScreen">
+        <div class="spinner"></div>
+        <div class="loading-text">INITIALIZING DEFENSE SYSTEMS...</div>
     </div>
 
+    <!-- HUD -->
+    <div id="hud">
+        <div style="font-size: 16px; font-weight: bold; margin-bottom: 8px;">⚔️ TOWER DEFENSE</div>
+        <div style="font-size: 11px; margin-top: 5px;">Wave: <span id="wave">0</span></div>
+        <div style="font-size: 11px;">Gold: <span id="gold">500</span> 💰</div>
+        <div style="font-size: 11px;">Lives: <span id="lives">20</span> ❤️</div>
+        <div style="font-size: 11px; margin-top: 5px;">Enemies: <span id="enemies">0</span></div>
+        <div style="font-size: 11px;">Score: <span id="score">0</span></div>
+    </div>
+
+    <!-- FPS Counter -->
+    <div id="fpsCounter">
+        FPS: <span id="fps">60</span>
+    </div>
+
+    <!-- High Score -->
+    <div id="highScore">
+        🏆 High Score: <span id="highScoreValue">0</span>
+    </div>
+
+    <!-- Tower Selection -->
     <div id="towers">
         <button class="tower-btn" data-type="cannon" data-cost="100">
             🔫 Cannon<br><small>100💰 | Fast</small>
@@ -96,10 +469,182 @@
         </button>
     </div>
 
+    <!-- Mobile Controls -->
+    <div id="mobileControls">
+        <button class="mobile-btn" id="mobilePause" title="Pause">⏸</button>
+        <button class="mobile-btn" id="mobileSettings" title="Settings">⚙️</button>
+        <button class="mobile-btn" id="mobileHelp" title="Help">❓</button>
+    </div>
+
+    <!-- Start Button -->
     <button id="startBtn">▶ START WAVE</button>
+
+    <!-- Pause Overlay -->
+    <div id="pauseOverlay">
+        <div class="pause-content">
+            ⏸ PAUSED<br>
+            <small style="font-size: 20px;">Press P to Resume</small>
+        </div>
+    </div>
+
+    <!-- Settings Panel -->
+    <div id="settingsPanel">
+        <div class="settings-title">⚙️ SETTINGS</div>
+
+        <div class="setting-group">
+            <label class="setting-label">Game Speed:</label>
+            <div class="setting-buttons">
+                <button class="setting-btn active" data-speed="1">1x</button>
+                <button class="setting-btn" data-speed="2">2x</button>
+                <button class="setting-btn" data-speed="3">3x</button>
+            </div>
+        </div>
+
+        <div class="setting-group">
+            <label class="setting-label">Graphics Quality:</label>
+            <div class="setting-buttons">
+                <button class="setting-btn" data-quality="low">Low</button>
+                <button class="setting-btn active" data-quality="medium">Medium</button>
+                <button class="setting-btn" data-quality="high">High</button>
+            </div>
+        </div>
+
+        <div class="setting-group">
+            <label class="setting-label">Sound:</label>
+            <div class="setting-buttons">
+                <button class="setting-btn active" data-sound="on">ON</button>
+                <button class="setting-btn" data-sound="off">OFF</button>
+            </div>
+        </div>
+
+        <button class="close-settings">CLOSE (ESC)</button>
+    </div>
+
+    <!-- Help Overlay -->
+    <div id="helpOverlay">
+        <div class="help-content">
+            <div class="help-title">🎮 CONTROLS & HELP</div>
+
+            <div class="help-section">
+                <h3>Keyboard Shortcuts:</h3>
+                <div class="help-item">
+                    <span>Pause/Resume</span>
+                    <span class="help-key">P</span>
+                </div>
+                <div class="help-item">
+                    <span>Toggle FPS Counter</span>
+                    <span class="help-key">F</span>
+                </div>
+                <div class="help-item">
+                    <span>Settings</span>
+                    <span class="help-key">ESC</span>
+                </div>
+                <div class="help-item">
+                    <span>Help (this screen)</span>
+                    <span class="help-key">H</span>
+                </div>
+            </div>
+
+            <div class="help-section">
+                <h3>How to Play:</h3>
+                <div style="padding: 10px; line-height: 1.6;">
+                    1. Click tower buttons to select a tower type<br>
+                    2. Click on the ground to place towers<br>
+                    3. Press START WAVE to begin the attack<br>
+                    4. Defend your base from enemies<br>
+                    5. Earn gold by defeating enemies<br>
+                    6. Survive as many waves as possible!
+                </div>
+            </div>
+
+            <div class="help-section">
+                <h3>Tower Types:</h3>
+                <div class="help-item">
+                    <span>🔫 Cannon</span>
+                    <span>Fast firing, balanced damage</span>
+                </div>
+                <div class="help-item">
+                    <span>⚡ Laser</span>
+                    <span>Powerful but slow</span>
+                </div>
+                <div class="help-item">
+                    <span>❄️ Freeze</span>
+                    <span>Slows enemies down</span>
+                </div>
+                <div class="help-item">
+                    <span>💥 AOE</span>
+                    <span>Area damage (splash)</span>
+                </div>
+            </div>
+
+            <button class="close-settings" onclick="toggleHelp()">CLOSE (H)</button>
+        </div>
+    </div>
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     <script>
+        // Game Settings
+        const settings = {
+            gameSpeed: 1,
+            graphicsQuality: 'medium',
+            soundEnabled: true,
+            fpsVisible: false
+        };
+
+        // Load settings from localStorage
+        function loadSettings() {
+            const saved = localStorage.getItem('towerDefenseSettings');
+            if (saved) {
+                Object.assign(settings, JSON.parse(saved));
+                applySettings();
+            }
+        }
+
+        function saveSettings() {
+            localStorage.setItem('towerDefenseSettings', JSON.stringify(settings));
+        }
+
+        function applySettings() {
+            // Apply graphics quality
+            if (settings.graphicsQuality === 'low') {
+                renderer.shadowMap.enabled = false;
+                scene.fog = null;
+            } else if (settings.graphicsQuality === 'medium') {
+                renderer.shadowMap.enabled = true;
+                scene.fog = new THREE.Fog(0x001122, 10, 80);
+            } else {
+                renderer.shadowMap.enabled = true;
+                scene.fog = new THREE.Fog(0x001122, 15, 100);
+            }
+
+            // Update UI
+            document.querySelectorAll('[data-speed]').forEach(btn => {
+                btn.classList.toggle('active', btn.dataset.speed == settings.gameSpeed);
+            });
+            document.querySelectorAll('[data-quality]').forEach(btn => {
+                btn.classList.toggle('active', btn.dataset.quality === settings.graphicsQuality);
+            });
+            document.querySelectorAll('[data-sound]').forEach(btn => {
+                btn.classList.toggle('active', btn.dataset.sound === (settings.soundEnabled ? 'on' : 'off'));
+            });
+
+            if (settings.fpsVisible) {
+                document.getElementById('fpsCounter').classList.add('visible');
+            }
+        }
+
+        // High Score Management
+        let highScore = parseInt(localStorage.getItem('towerDefenseHighScore') || '0');
+        document.getElementById('highScoreValue').textContent = highScore;
+
+        function updateHighScore(score) {
+            if (score > highScore) {
+                highScore = score;
+                localStorage.setItem('towerDefenseHighScore', highScore);
+                document.getElementById('highScoreValue').textContent = highScore;
+            }
+        }
+
         // Scene setup
         const scene = new THREE.Scene();
         scene.background = new THREE.Color(0x001122);
@@ -132,13 +677,16 @@
             gold: 500,
             lives: 20,
             wave: 0,
+            score: 0,
             selectedTowerType: null,
-            isWaveActive: false
+            isWaveActive: false,
+            isPaused: false
         };
 
         const towers = [];
         const enemies = [];
         const projectiles = [];
+        const healthBars = new Map();
 
         // Create path
         const pathPoints = [
@@ -249,7 +797,9 @@
             }
 
             update() {
-                this.cooldown--;
+                if (gameState.isPaused) return;
+
+                this.cooldown -= settings.gameSpeed;
 
                 // Find target
                 if (!this.target || this.target.health <= 0 ||
@@ -297,7 +847,7 @@
             }
         }
 
-        // Enemy class
+        // Enemy class with health bar
         class Enemy {
             constructor(wave) {
                 this.health = 50 + wave * 20;
@@ -316,24 +866,66 @@
 
                 this.position = pathCurve.getPointAt(0);
                 this.mesh.position.copy(this.position);
+
+                // Create health bar
+                this.createHealthBar();
+            }
+
+            createHealthBar() {
+                const container = document.createElement('div');
+                container.className = 'health-bar-container';
+                const bar = document.createElement('div');
+                bar.className = 'health-bar';
+                bar.style.width = '100%';
+                container.appendChild(bar);
+                document.body.appendChild(container);
+                healthBars.set(this, { container, bar });
+            }
+
+            updateHealthBar() {
+                const hb = healthBars.get(this);
+                if (!hb) return;
+
+                const vector = this.position.clone();
+                vector.y += 1.5;
+                vector.project(camera);
+
+                const x = (vector.x * 0.5 + 0.5) * window.innerWidth;
+                const y = (-vector.y * 0.5 + 0.5) * window.innerHeight;
+
+                hb.container.style.left = (x - 15) + 'px';
+                hb.container.style.top = (y - 20) + 'px';
+                hb.bar.style.width = ((this.health / this.maxHealth) * 100) + '%';
             }
 
             update() {
+                if (gameState.isPaused) return;
+
                 if (this.health <= 0) {
                     scene.remove(this.mesh);
+                    const hb = healthBars.get(this);
+                    if (hb) {
+                        hb.container.remove();
+                        healthBars.delete(this);
+                    }
                     return;
                 }
 
-                this.progress += this.speed * this.slowEffect;
+                this.progress += this.speed * this.slowEffect * settings.gameSpeed;
                 this.slowEffect = Math.min(1, this.slowEffect + 0.02);
 
                 if (this.progress >= 1) {
                     gameState.lives--;
                     updateHUD();
                     scene.remove(this.mesh);
+                    const hb = healthBars.get(this);
+                    if (hb) {
+                        hb.container.remove();
+                        healthBars.delete(this);
+                    }
                     this.health = 0;
                     if (gameState.lives <= 0) {
-                        alert('💀 Game Over! Refresh to restart.');
+                        gameOver();
                     }
                     return;
                 }
@@ -342,8 +934,11 @@
                 this.mesh.position.copy(this.position);
                 this.mesh.position.y = 0.4;
 
-                // Health bar
+                // Update mesh color based on health
                 this.mesh.material.color.setHSL(this.health / this.maxHealth * 0.3, 1, 0.5);
+
+                // Update health bar
+                this.updateHealthBar();
             }
 
             damage(amount, effect) {
@@ -353,6 +948,8 @@
                 }
                 if (this.health <= 0) {
                     gameState.gold += this.gold;
+                    gameState.score += this.gold * gameState.wave;
+                    updateHighScore(gameState.score);
                     updateHUD();
                 }
             }
@@ -377,6 +974,8 @@
             }
 
             update() {
+                if (gameState.isPaused) return;
+
                 if (!this.active || !this.target || this.target.health <= 0) {
                     scene.remove(this.mesh);
                     this.active = false;
@@ -386,7 +985,7 @@
                 const direction = new THREE.Vector3()
                     .subVectors(this.target.position, this.position)
                     .normalize()
-                    .multiplyScalar(this.stats.projectileSpeed);
+                    .multiplyScalar(this.stats.projectileSpeed * settings.gameSpeed);
 
                 this.position.add(direction);
                 this.mesh.position.copy(this.position);
@@ -418,6 +1017,7 @@
         }
 
         // Wave management
+        let spawnInterval;
         function startWave() {
             if (gameState.isWaveActive) return;
 
@@ -428,13 +1028,15 @@
             const enemyCount = 5 + gameState.wave * 3;
             let spawned = 0;
 
-            const spawnInterval = setInterval(() => {
-                enemies.push(new Enemy(gameState.wave));
-                spawned++;
+            spawnInterval = setInterval(() => {
+                if (!gameState.isPaused) {
+                    enemies.push(new Enemy(gameState.wave));
+                    spawned++;
 
-                if (spawned >= enemyCount) {
-                    clearInterval(spawnInterval);
-                    checkWaveComplete();
+                    if (spawned >= enemyCount) {
+                        clearInterval(spawnInterval);
+                        checkWaveComplete();
+                    }
                 }
             }, 1000);
         }
@@ -447,6 +1049,8 @@
                     gameState.isWaveActive = false;
                     document.getElementById('startBtn').style.display = 'block';
                     gameState.gold += 50 + gameState.wave * 10;
+                    gameState.score += 100 * gameState.wave;
+                    updateHighScore(gameState.score);
                     updateHUD();
                 }
             }, 500);
@@ -469,7 +1073,23 @@
             }
         });
 
-        renderer.domElement.addEventListener('click', () => {
+        // Touch support for mobile
+        renderer.domElement.addEventListener('touchstart', (event) => {
+            event.preventDefault();
+            const touch = event.touches[0];
+            mouse.x = (touch.clientX / window.innerWidth) * 2 - 1;
+            mouse.y = -(touch.clientY / window.innerHeight) * 2 + 1;
+
+            raycaster.setFromCamera(mouse, camera);
+            const intersects = raycaster.intersectObject(ground);
+
+            if (intersects.length > 0 && gameState.selectedTowerType) {
+                hoveredPosition = intersects[0].point;
+                placeTower();
+            }
+        });
+
+        function placeTower() {
             if (hoveredPosition && gameState.selectedTowerType) {
                 const towerBtn = document.querySelector(`[data-type="${gameState.selectedTowerType}"]`);
                 const cost = parseInt(towerBtn.dataset.cost);
@@ -480,7 +1100,9 @@
                     updateHUD();
                 }
             }
-        });
+        }
+
+        renderer.domElement.addEventListener('click', placeTower);
 
         // UI handlers
         document.querySelectorAll('.tower-btn').forEach(btn => {
@@ -498,6 +1120,7 @@
             document.getElementById('gold').textContent = gameState.gold;
             document.getElementById('lives').textContent = gameState.lives;
             document.getElementById('enemies').textContent = enemies.filter(e => e.health > 0).length;
+            document.getElementById('score').textContent = gameState.score;
 
             // Update tower button states
             document.querySelectorAll('.tower-btn').forEach(btn => {
@@ -510,23 +1133,130 @@
             });
         }
 
+        // Pause/Resume
+        function togglePause() {
+            gameState.isPaused = !gameState.isPaused;
+            document.getElementById('pauseOverlay').classList.toggle('visible', gameState.isPaused);
+        }
+
+        // Settings Panel
+        function toggleSettings() {
+            const panel = document.getElementById('settingsPanel');
+            const isVisible = panel.classList.toggle('visible');
+            if (isVisible && !gameState.isPaused && gameState.isWaveActive) {
+                togglePause();
+            }
+        }
+
+        // Help Overlay
+        function toggleHelp() {
+            document.getElementById('helpOverlay').classList.toggle('visible');
+        }
+
+        // FPS Counter
+        let lastTime = performance.now();
+        let frames = 0;
+        let fps = 60;
+
+        function updateFPS() {
+            frames++;
+            const currentTime = performance.now();
+            if (currentTime >= lastTime + 1000) {
+                fps = Math.round((frames * 1000) / (currentTime - lastTime));
+                document.getElementById('fps').textContent = fps;
+                frames = 0;
+                lastTime = currentTime;
+            }
+        }
+
+        // Keyboard Controls
+        document.addEventListener('keydown', (e) => {
+            switch(e.key.toLowerCase()) {
+                case 'p':
+                    togglePause();
+                    break;
+                case 'f':
+                    settings.fpsVisible = !settings.fpsVisible;
+                    document.getElementById('fpsCounter').classList.toggle('visible', settings.fpsVisible);
+                    saveSettings();
+                    break;
+                case 'escape':
+                    toggleSettings();
+                    break;
+                case 'h':
+                    toggleHelp();
+                    break;
+            }
+        });
+
+        // Settings Event Listeners
+        document.querySelectorAll('[data-speed]').forEach(btn => {
+            btn.addEventListener('click', () => {
+                settings.gameSpeed = parseFloat(btn.dataset.speed);
+                document.querySelectorAll('[data-speed]').forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                saveSettings();
+            });
+        });
+
+        document.querySelectorAll('[data-quality]').forEach(btn => {
+            btn.addEventListener('click', () => {
+                settings.graphicsQuality = btn.dataset.quality;
+                document.querySelectorAll('[data-quality]').forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                applySettings();
+                saveSettings();
+            });
+        });
+
+        document.querySelectorAll('[data-sound]').forEach(btn => {
+            btn.addEventListener('click', () => {
+                settings.soundEnabled = btn.dataset.sound === 'on';
+                document.querySelectorAll('[data-sound]').forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                saveSettings();
+            });
+        });
+
+        document.querySelector('.close-settings').addEventListener('click', toggleSettings);
+
+        // Mobile Controls
+        document.getElementById('mobilePause')?.addEventListener('click', togglePause);
+        document.getElementById('mobileSettings')?.addEventListener('click', toggleSettings);
+        document.getElementById('mobileHelp')?.addEventListener('click', toggleHelp);
+
+        // Game Over
+        function gameOver() {
+            gameState.isPaused = true;
+            updateHighScore(gameState.score);
+            setTimeout(() => {
+                if (confirm(`💀 GAME OVER!\n\nWave: ${gameState.wave}\nScore: ${gameState.score}\nHigh Score: ${highScore}\n\nPlay again?`)) {
+                    location.reload();
+                }
+            }, 100);
+        }
+
         // Animation loop
         function animate() {
             requestAnimationFrame(animate);
 
-            towers.forEach(tower => tower.update());
-            enemies.forEach(enemy => enemy.update());
-            projectiles.forEach((proj, idx) => {
-                proj.update();
-                if (!proj.active) projectiles.splice(idx, 1);
-            });
+            if (!gameState.isPaused) {
+                towers.forEach(tower => tower.update());
+                enemies.forEach(enemy => enemy.update());
+                projectiles.forEach((proj, idx) => {
+                    proj.update();
+                    if (!proj.active) projectiles.splice(idx, 1);
+                });
 
-            // Rotate camera slowly
-            camera.position.x = Math.sin(Date.now() * 0.0001) * 25;
-            camera.position.z = Math.cos(Date.now() * 0.0001) * 25;
-            camera.lookAt(0, 0, 0);
+                // Rotate camera slowly
+                camera.position.x = Math.sin(Date.now() * 0.0001) * 25;
+                camera.position.z = Math.cos(Date.now() * 0.0001) * 25;
+                camera.lookAt(0, 0, 0);
 
-            updateHUD();
+                updateHUD();
+            }
+
+            updateFPS();
             renderer.render(scene, camera);
         }
 
@@ -535,6 +1265,17 @@
             camera.aspect = window.innerWidth / window.innerHeight;
             camera.updateProjectionMatrix();
             renderer.setSize(window.innerWidth, window.innerHeight);
+        });
+
+        // Initialize
+        loadSettings();
+        applySettings();
+
+        // Hide loading screen after Three.js loads
+        window.addEventListener('load', () => {
+            setTimeout(() => {
+                document.getElementById('loadingScreen').classList.add('hidden');
+            }, 500);
         });
 
         animate();
