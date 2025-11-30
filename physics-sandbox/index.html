@@ -1,14 +1,84 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-    <title>Physics Sandbox 3D</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="description" content="Interactive 3D physics sandbox with realistic physics simulation. Spawn objects, build towers, create domino chains, and experiment with gravity in this immersive cyberpunk-styled playground.">
+    <meta name="keywords" content="physics sandbox, 3D game, interactive physics, Three.js, Cannon.js, physics simulation">
+    <meta name="author" content="Physics Sandbox">
+
+    <!-- Open Graph / Social Media Meta Tags -->
+    <meta property="og:type" content="website">
+    <meta property="og:title" content="Physics Sandbox 3D - Interactive Physics Playground">
+    <meta property="og:description" content="Interactive 3D physics sandbox with realistic physics simulation. Build, destroy, and experiment!">
+    <meta property="og:image" content="https://via.placeholder.com/1200x630/001122/00ff88?text=Physics+Sandbox+3D">
+    <meta property="og:url" content="">
+
+    <!-- Twitter Card Meta Tags -->
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="Physics Sandbox 3D - Interactive Physics Playground">
+    <meta name="twitter:description" content="Interactive 3D physics sandbox with realistic physics simulation. Build, destroy, and experiment!">
+    <meta name="twitter:image" content="https://via.placeholder.com/1200x630/001122/00ff88?text=Physics+Sandbox+3D">
+
+    <title>Physics Sandbox 3D - Interactive Physics Playground</title>
     <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
         body {
             margin: 0;
             overflow: hidden;
             font-family: 'Courier New', monospace;
             background: #000;
+            touch-action: none;
         }
+
+        /* Loading Screen */
+        #loadingScreen {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: #000;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 10000;
+            transition: opacity 0.5s;
+        }
+
+        #loadingScreen.hidden {
+            opacity: 0;
+            pointer-events: none;
+        }
+
+        .spinner {
+            width: 60px;
+            height: 60px;
+            border: 4px solid rgba(0, 255, 136, 0.1);
+            border-top: 4px solid #00ff88;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-bottom: 20px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .loading-text {
+            color: #00ff88;
+            font-size: 18px;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+        }
+
         #info {
             position: absolute;
             top: 10px;
@@ -20,7 +90,15 @@
             border-radius: 8px;
             font-size: 14px;
             z-index: 100;
+            box-shadow: 0 0 20px rgba(0, 255, 136, 0.3);
         }
+
+        .hint {
+            font-size: 10px;
+            color: #88ff88;
+            margin-top: 5px;
+        }
+
         #controls {
             position: absolute;
             bottom: 10px;
@@ -31,6 +109,7 @@
             max-width: 400px;
             z-index: 100;
         }
+
         .control-btn {
             background: rgba(0, 255, 136, 0.2);
             border: 2px solid #00ff88;
@@ -41,19 +120,19 @@
             font-family: 'Courier New', monospace;
             font-size: 12px;
             transition: all 0.3s;
+            box-shadow: 0 0 10px rgba(0, 255, 136, 0.2);
         }
+
         .control-btn:hover {
             background: rgba(0, 255, 136, 0.4);
             transform: translateY(-2px);
+            box-shadow: 0 0 20px rgba(0, 255, 136, 0.4);
         }
+
         .control-btn.active {
             background: rgba(0, 255, 136, 0.6);
         }
-        .hint {
-            font-size: 10px;
-            color: #88ff88;
-            margin-top: 5px;
-        }
+
         #sliders {
             position: absolute;
             top: 10px;
@@ -65,44 +144,446 @@
             color: #00ff88;
             font-size: 12px;
             z-index: 100;
+            box-shadow: 0 0 20px rgba(0, 255, 136, 0.3);
         }
+
         input[type="range"] {
             width: 150px;
             margin: 5px 0;
         }
+
+        /* FPS Counter */
+        #fpsCounter {
+            position: absolute;
+            top: 10px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(0, 0, 0, 0.9);
+            border: 2px solid #00ff88;
+            padding: 10px 20px;
+            border-radius: 8px;
+            color: #00ff88;
+            font-size: 16px;
+            font-weight: bold;
+            z-index: 100;
+            display: none;
+            box-shadow: 0 0 20px rgba(0, 255, 136, 0.3);
+        }
+
+        #fpsCounter.visible {
+            display: block;
+        }
+
+        /* Pause Overlay */
+        #pauseOverlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.8);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 500;
+        }
+
+        #pauseOverlay.visible {
+            display: flex;
+        }
+
+        .pause-text {
+            color: #00ff88;
+            font-size: 48px;
+            text-transform: uppercase;
+            letter-spacing: 4px;
+            text-shadow: 0 0 20px rgba(0, 255, 136, 0.5);
+        }
+
+        /* Settings Panel */
+        #settingsPanel {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(0, 0, 0, 0.95);
+            border: 3px solid #00ff88;
+            border-radius: 12px;
+            padding: 30px;
+            color: #00ff88;
+            z-index: 1000;
+            display: none;
+            min-width: 400px;
+            max-height: 80vh;
+            overflow-y: auto;
+            box-shadow: 0 0 40px rgba(0, 255, 136, 0.5);
+        }
+
+        #settingsPanel.visible {
+            display: block;
+        }
+
+        .settings-title {
+            font-size: 24px;
+            margin-bottom: 20px;
+            text-align: center;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+        }
+
+        .settings-section {
+            margin: 20px 0;
+            padding: 15px;
+            border: 1px solid rgba(0, 255, 136, 0.3);
+            border-radius: 8px;
+        }
+
+        .settings-section h3 {
+            margin-bottom: 15px;
+            font-size: 16px;
+            color: #00ff88;
+        }
+
+        .setting-item {
+            margin: 15px 0;
+        }
+
+        .setting-item label {
+            display: block;
+            margin-bottom: 5px;
+            font-size: 12px;
+        }
+
+        .setting-item input[type="range"] {
+            width: 100%;
+        }
+
+        .setting-item select {
+            width: 100%;
+            padding: 8px;
+            background: rgba(0, 255, 136, 0.1);
+            border: 2px solid #00ff88;
+            color: #00ff88;
+            border-radius: 4px;
+            font-family: 'Courier New', monospace;
+        }
+
+        .close-btn {
+            display: block;
+            margin: 20px auto 0;
+            padding: 12px 30px;
+            background: rgba(0, 255, 136, 0.2);
+            border: 2px solid #00ff88;
+            color: #00ff88;
+            border-radius: 8px;
+            cursor: pointer;
+            font-family: 'Courier New', monospace;
+            font-size: 14px;
+            transition: all 0.3s;
+        }
+
+        .close-btn:hover {
+            background: rgba(0, 255, 136, 0.4);
+        }
+
+        /* Help Overlay */
+        #helpOverlay {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(0, 0, 0, 0.95);
+            border: 3px solid #00ff88;
+            border-radius: 12px;
+            padding: 30px;
+            color: #00ff88;
+            z-index: 1000;
+            display: none;
+            max-width: 600px;
+            max-height: 80vh;
+            overflow-y: auto;
+            box-shadow: 0 0 40px rgba(0, 255, 136, 0.5);
+        }
+
+        #helpOverlay.visible {
+            display: block;
+        }
+
+        .help-title {
+            font-size: 24px;
+            margin-bottom: 20px;
+            text-align: center;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+        }
+
+        .help-section {
+            margin: 15px 0;
+        }
+
+        .help-section h3 {
+            margin-bottom: 10px;
+            font-size: 16px;
+            color: #00ff88;
+            border-bottom: 1px solid rgba(0, 255, 136, 0.3);
+            padding-bottom: 5px;
+        }
+
+        .help-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 8px 0;
+            font-size: 12px;
+        }
+
+        .help-key {
+            background: rgba(0, 255, 136, 0.2);
+            padding: 4px 12px;
+            border-radius: 4px;
+            border: 1px solid #00ff88;
+            font-weight: bold;
+        }
+
+        .help-desc {
+            color: #88ff88;
+        }
+
+        /* Mobile Touch Controls */
+        #mobileControls {
+            display: none;
+            position: absolute;
+            bottom: 100px;
+            right: 10px;
+            z-index: 100;
+        }
+
+        @media (max-width: 768px) {
+            #mobileControls {
+                display: flex;
+                flex-direction: column;
+                gap: 10px;
+            }
+
+            #controls {
+                max-width: 300px;
+                font-size: 10px;
+            }
+
+            .control-btn {
+                padding: 8px 12px;
+                font-size: 10px;
+            }
+
+            #sliders {
+                font-size: 10px;
+                padding: 10px;
+            }
+
+            #settingsPanel {
+                min-width: 90%;
+                padding: 20px;
+            }
+        }
+
+        .mobile-btn {
+            width: 60px;
+            height: 60px;
+            background: rgba(0, 255, 136, 0.3);
+            border: 2px solid #00ff88;
+            border-radius: 50%;
+            color: #00ff88;
+            font-size: 24px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            cursor: pointer;
+            box-shadow: 0 0 15px rgba(0, 255, 136, 0.3);
+            transition: all 0.3s;
+        }
+
+        .mobile-btn:active {
+            background: rgba(0, 255, 136, 0.6);
+            transform: scale(0.95);
+        }
     </style>
 </head>
 <body>
+    <!-- Loading Screen -->
+    <div id="loadingScreen">
+        <div class="spinner"></div>
+        <div class="loading-text">Loading Physics Engine...</div>
+    </div>
+
+    <!-- Pause Overlay -->
+    <div id="pauseOverlay">
+        <div class="pause-text">PAUSED</div>
+    </div>
+
+    <!-- FPS Counter -->
+    <div id="fpsCounter">FPS: <span id="fpsValue">60</span></div>
+
+    <!-- Info Panel -->
     <div id="info">
-        <div>🎮 PHYSICS SANDBOX</div>
+        <div>PHYSICS SANDBOX</div>
         <div class="hint">Click to spawn objects</div>
         <div class="hint">Drag to throw</div>
         <div class="hint">Mouse wheel: Zoom</div>
+        <div class="hint">Press H for help</div>
         <div class="hint">Objects: <span id="objCount">0</span></div>
     </div>
 
+    <!-- Sliders -->
     <div id="sliders">
-        <div>⚖️ Gravity</div>
+        <div>Gravity</div>
         <input type="range" id="gravity" min="0" max="30" value="9.8" step="0.1">
-        <div style="margin-top: 10px;">💪 Throw Force</div>
+        <span id="gravityValue">9.8</span>
+        <div style="margin-top: 10px;">Throw Force</div>
         <input type="range" id="force" min="1" max="50" value="15" step="1">
-        <div style="margin-top: 10px;">📦 Size</div>
+        <span id="forceValue">15</span>
+        <div style="margin-top: 10px;">Size</div>
         <input type="range" id="size" min="0.5" max="5" value="1" step="0.1">
+        <span id="sizeValue">1.0</span>
     </div>
 
+    <!-- Controls -->
     <div id="controls">
-        <button class="control-btn active" data-shape="box">📦 Box</button>
-        <button class="control-btn" data-shape="sphere">⚽ Sphere</button>
-        <button class="control-btn" data-shape="cylinder">🗜️ Cylinder</button>
-        <button class="control-btn" data-shape="cone">🔺 Cone</button>
-        <button class="control-btn" data-shape="domino">🎴 Domino</button>
-        <button class="control-btn" data-shape="tower">🏰 Tower</button>
-        <button class="control-btn" style="background: rgba(255, 50, 50, 0.2); border-color: #ff3333; color: #ff3333;" id="clearBtn">🗑️ Clear All</button>
+        <button class="control-btn active" data-shape="box">Box</button>
+        <button class="control-btn" data-shape="sphere">Sphere</button>
+        <button class="control-btn" data-shape="cylinder">Cylinder</button>
+        <button class="control-btn" data-shape="cone">Cone</button>
+        <button class="control-btn" data-shape="domino">Domino</button>
+        <button class="control-btn" data-shape="tower">Tower</button>
+        <button class="control-btn" style="background: rgba(255, 50, 50, 0.2); border-color: #ff3333; color: #ff3333;" id="clearBtn">Clear All</button>
+    </div>
+
+    <!-- Mobile Controls -->
+    <div id="mobileControls">
+        <div class="mobile-btn" id="mobilePause">⏸</div>
+        <div class="mobile-btn" id="mobileSettings">⚙</div>
+        <div class="mobile-btn" id="mobileHelp">?</div>
+    </div>
+
+    <!-- Settings Panel -->
+    <div id="settingsPanel">
+        <div class="settings-title">Settings</div>
+
+        <div class="settings-section">
+            <h3>Physics</h3>
+            <div class="setting-item">
+                <label>Gravity Strength: <span id="settingsGravityValue">9.8</span></label>
+                <input type="range" id="settingsGravity" min="0" max="30" value="9.8" step="0.1">
+            </div>
+        </div>
+
+        <div class="settings-section">
+            <h3>Graphics Quality</h3>
+            <div class="setting-item">
+                <label>Quality Preset:</label>
+                <select id="qualitySelect">
+                    <option value="low">Low (Better Performance)</option>
+                    <option value="medium" selected>Medium</option>
+                    <option value="high">High (Better Quality)</option>
+                </select>
+            </div>
+            <div class="setting-item">
+                <label>Shadow Quality:</label>
+                <select id="shadowQuality">
+                    <option value="512">Low (512)</option>
+                    <option value="1024">Medium (1024)</option>
+                    <option value="2048" selected>High (2048)</option>
+                    <option value="4096">Ultra (4096)</option>
+                </select>
+            </div>
+        </div>
+
+        <div class="settings-section">
+            <h3>Default Object Type</h3>
+            <div class="setting-item">
+                <label>Spawn Type:</label>
+                <select id="defaultShape">
+                    <option value="box" selected>Box</option>
+                    <option value="sphere">Sphere</option>
+                    <option value="cylinder">Cylinder</option>
+                    <option value="cone">Cone</option>
+                </select>
+            </div>
+        </div>
+
+        <button class="close-btn" id="closeSettings">Close (ESC)</button>
+    </div>
+
+    <!-- Help Overlay -->
+    <div id="helpOverlay">
+        <div class="help-title">Keyboard Shortcuts</div>
+
+        <div class="help-section">
+            <h3>Game Controls</h3>
+            <div class="help-item">
+                <span class="help-key">P</span>
+                <span class="help-desc">Pause / Resume</span>
+            </div>
+            <div class="help-item">
+                <span class="help-key">F</span>
+                <span class="help-desc">Toggle FPS Counter</span>
+            </div>
+            <div class="help-item">
+                <span class="help-key">ESC</span>
+                <span class="help-desc">Open Settings</span>
+            </div>
+            <div class="help-item">
+                <span class="help-key">H</span>
+                <span class="help-desc">Toggle This Help</span>
+            </div>
+        </div>
+
+        <div class="help-section">
+            <h3>Mouse Controls</h3>
+            <div class="help-item">
+                <span class="help-key">Click</span>
+                <span class="help-desc">Spawn Object</span>
+            </div>
+            <div class="help-item">
+                <span class="help-key">Click + Drag</span>
+                <span class="help-desc">Throw Object</span>
+            </div>
+            <div class="help-item">
+                <span class="help-key">Mouse Wheel</span>
+                <span class="help-desc">Zoom Camera</span>
+            </div>
+        </div>
+
+        <div class="help-section">
+            <h3>Touch Controls (Mobile)</h3>
+            <div class="help-item">
+                <span class="help-key">Tap</span>
+                <span class="help-desc">Spawn Object</span>
+            </div>
+            <div class="help-item">
+                <span class="help-key">Tap + Drag</span>
+                <span class="help-desc">Throw Object</span>
+            </div>
+            <div class="help-item">
+                <span class="help-key">Pinch</span>
+                <span class="help-desc">Zoom Camera</span>
+            </div>
+        </div>
+
+        <button class="close-btn" id="closeHelp">Close (H)</button>
     </div>
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/cannon@0.6.2/build/cannon.min.js"></script>
     <script>
+        // Loading management
+        let loadingComplete = false;
+
+        // Game state
+        let isPaused = false;
+        let showFPS = false;
+        let lastTime = performance.now();
+        let frames = 0;
+        let fps = 60;
+
         // Physics world
         const world = new CANNON.World();
         world.gravity.set(0, -9.8, 0);
@@ -166,7 +647,9 @@
         const settings = {
             gravity: 9.8,
             force: 15,
-            size: 1
+            size: 1,
+            quality: 'medium',
+            shadowQuality: 2048
         };
 
         // Materials
@@ -293,33 +776,35 @@
             }
         }
 
-        // Mouse interaction
+        // Mouse/Touch interaction
         const raycaster = new THREE.Raycaster();
         const mouse = new THREE.Vector2();
         let isDragging = false;
         let dragStart = null;
         let dragEnd = null;
+        let touchStartDistance = 0;
+        let initialCameraDistance = 0;
 
-        renderer.domElement.addEventListener('mousedown', (event) => {
-            mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
-            mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
+        function handleStart(clientX, clientY) {
+            mouse.x = (clientX / window.innerWidth) * 2 - 1;
+            mouse.y = -(clientY / window.innerHeight) * 2 + 1;
 
             isDragging = true;
-            dragStart = { x: event.clientX, y: event.clientY, time: Date.now() };
-        });
+            dragStart = { x: clientX, y: clientY, time: Date.now() };
+        }
 
-        renderer.domElement.addEventListener('mousemove', (event) => {
+        function handleMove(clientX, clientY) {
             if (isDragging) {
-                dragEnd = { x: event.clientX, y: event.clientY, time: Date.now() };
+                dragEnd = { x: clientX, y: clientY, time: Date.now() };
             }
-        });
+        }
 
-        renderer.domElement.addEventListener('mouseup', (event) => {
-            if (!isDragging) return;
+        function handleEnd(clientX, clientY) {
+            if (!isDragging || isPaused) return;
             isDragging = false;
 
-            mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
-            mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
+            mouse.x = (clientX / window.innerWidth) * 2 - 1;
+            mouse.y = -(clientY / window.innerHeight) * 2 + 1;
 
             raycaster.setFromCamera(mouse, camera);
             const intersects = raycaster.intersectObject(groundMesh);
@@ -355,7 +840,56 @@
 
             dragStart = null;
             dragEnd = null;
+        }
+
+        // Mouse events
+        renderer.domElement.addEventListener('mousedown', (event) => {
+            handleStart(event.clientX, event.clientY);
         });
+
+        renderer.domElement.addEventListener('mousemove', (event) => {
+            handleMove(event.clientX, event.clientY);
+        });
+
+        renderer.domElement.addEventListener('mouseup', (event) => {
+            handleEnd(event.clientX, event.clientY);
+        });
+
+        // Touch events
+        renderer.domElement.addEventListener('touchstart', (event) => {
+            event.preventDefault();
+            if (event.touches.length === 1) {
+                handleStart(event.touches[0].clientX, event.touches[0].clientY);
+            } else if (event.touches.length === 2) {
+                // Pinch to zoom
+                const dx = event.touches[0].clientX - event.touches[1].clientX;
+                const dy = event.touches[0].clientY - event.touches[1].clientY;
+                touchStartDistance = Math.sqrt(dx * dx + dy * dy);
+                initialCameraDistance = camera.position.length();
+            }
+        }, { passive: false });
+
+        renderer.domElement.addEventListener('touchmove', (event) => {
+            event.preventDefault();
+            if (event.touches.length === 1) {
+                handleMove(event.touches[0].clientX, event.touches[0].clientY);
+            } else if (event.touches.length === 2) {
+                // Pinch to zoom
+                const dx = event.touches[0].clientX - event.touches[1].clientX;
+                const dy = event.touches[0].clientY - event.touches[1].clientY;
+                const distance = Math.sqrt(dx * dx + dy * dy);
+                const scale = distance / touchStartDistance;
+                const newDistance = initialCameraDistance / scale;
+                camera.position.setLength(newDistance);
+            }
+        }, { passive: false });
+
+        renderer.domElement.addEventListener('touchend', (event) => {
+            event.preventDefault();
+            if (event.changedTouches.length === 1) {
+                handleEnd(event.changedTouches[0].clientX, event.changedTouches[0].clientY);
+            }
+        }, { passive: false });
 
         // Mouse wheel zoom
         renderer.domElement.addEventListener('wheel', (event) => {
@@ -374,44 +908,168 @@
         });
 
         document.getElementById('clearBtn').addEventListener('click', () => {
-            objects.forEach(obj => obj.remove());
+            [...objects].forEach(obj => obj.remove());
         });
 
         document.getElementById('gravity').addEventListener('input', (e) => {
             settings.gravity = parseFloat(e.target.value);
             world.gravity.set(0, -settings.gravity, 0);
+            document.getElementById('gravityValue').textContent = settings.gravity.toFixed(1);
         });
 
         document.getElementById('force').addEventListener('input', (e) => {
             settings.force = parseFloat(e.target.value);
+            document.getElementById('forceValue').textContent = settings.force;
         });
 
         document.getElementById('size').addEventListener('input', (e) => {
             settings.size = parseFloat(e.target.value);
+            document.getElementById('sizeValue').textContent = settings.size.toFixed(1);
         });
+
+        // Settings panel
+        document.getElementById('settingsGravity').addEventListener('input', (e) => {
+            const value = parseFloat(e.target.value);
+            settings.gravity = value;
+            world.gravity.set(0, -settings.gravity, 0);
+            document.getElementById('settingsGravityValue').textContent = value.toFixed(1);
+            document.getElementById('gravity').value = value;
+            document.getElementById('gravityValue').textContent = value.toFixed(1);
+        });
+
+        document.getElementById('qualitySelect').addEventListener('change', (e) => {
+            settings.quality = e.target.value;
+            applyQualitySettings();
+        });
+
+        document.getElementById('shadowQuality').addEventListener('change', (e) => {
+            settings.shadowQuality = parseInt(e.target.value);
+            directionalLight.shadow.mapSize.width = settings.shadowQuality;
+            directionalLight.shadow.mapSize.height = settings.shadowQuality;
+            directionalLight.shadow.map = null; // Force update
+        });
+
+        document.getElementById('defaultShape').addEventListener('change', (e) => {
+            selectedShape = e.target.value;
+            document.querySelectorAll('.control-btn[data-shape]').forEach(b => b.classList.remove('active'));
+            document.querySelector(`.control-btn[data-shape="${selectedShape}"]`).classList.add('active');
+        });
+
+        function applyQualitySettings() {
+            switch(settings.quality) {
+                case 'low':
+                    renderer.setPixelRatio(1);
+                    renderer.shadowMap.enabled = false;
+                    scene.fog = null;
+                    break;
+                case 'medium':
+                    renderer.setPixelRatio(window.devicePixelRatio > 1 ? 1.5 : 1);
+                    renderer.shadowMap.enabled = true;
+                    scene.fog = new THREE.Fog(0x001122, 50, 100);
+                    break;
+                case 'high':
+                    renderer.setPixelRatio(window.devicePixelRatio);
+                    renderer.shadowMap.enabled = true;
+                    scene.fog = new THREE.Fog(0x001122, 70, 120);
+                    break;
+            }
+        }
+
+        // Keyboard controls
+        document.addEventListener('keydown', (event) => {
+            switch(event.key.toLowerCase()) {
+                case 'p':
+                    togglePause();
+                    break;
+                case 'f':
+                    toggleFPS();
+                    break;
+                case 'escape':
+                    toggleSettings();
+                    break;
+                case 'h':
+                    toggleHelp();
+                    break;
+            }
+        });
+
+        function togglePause() {
+            isPaused = !isPaused;
+            document.getElementById('pauseOverlay').classList.toggle('visible', isPaused);
+        }
+
+        function toggleFPS() {
+            showFPS = !showFPS;
+            document.getElementById('fpsCounter').classList.toggle('visible', showFPS);
+        }
+
+        function toggleSettings() {
+            const panel = document.getElementById('settingsPanel');
+            const isVisible = panel.classList.contains('visible');
+            panel.classList.toggle('visible');
+            if (!isVisible) {
+                isPaused = true;
+            } else {
+                isPaused = false;
+            }
+        }
+
+        function toggleHelp() {
+            const help = document.getElementById('helpOverlay');
+            help.classList.toggle('visible');
+        }
+
+        document.getElementById('closeSettings').addEventListener('click', () => {
+            toggleSettings();
+        });
+
+        document.getElementById('closeHelp').addEventListener('click', () => {
+            toggleHelp();
+        });
+
+        // Mobile button controls
+        document.getElementById('mobilePause').addEventListener('click', togglePause);
+        document.getElementById('mobileSettings').addEventListener('click', toggleSettings);
+        document.getElementById('mobileHelp').addEventListener('click', toggleHelp);
 
         // Camera orbit
         let cameraAngle = 0;
+
+        // FPS calculation
+        function updateFPS() {
+            frames++;
+            const currentTime = performance.now();
+            if (currentTime >= lastTime + 1000) {
+                fps = Math.round((frames * 1000) / (currentTime - lastTime));
+                document.getElementById('fpsValue').textContent = fps;
+                frames = 0;
+                lastTime = currentTime;
+            }
+        }
 
         // Animation loop
         function animate() {
             requestAnimationFrame(animate);
 
-            // Update physics
-            world.step(1 / 60);
+            updateFPS();
 
-            // Update objects
-            objects.forEach(obj => obj.update());
+            if (!isPaused) {
+                // Update physics
+                world.step(1 / 60);
 
-            // Slowly orbit camera
-            cameraAngle += 0.001;
-            const radius = Math.sqrt(camera.position.x ** 2 + camera.position.z ** 2);
-            camera.position.x = Math.sin(cameraAngle) * radius;
-            camera.position.z = Math.cos(cameraAngle) * radius;
-            camera.lookAt(0, 5, 0);
+                // Update objects
+                objects.forEach(obj => obj.update());
 
-            // Update UI
-            document.getElementById('objCount').textContent = objects.length;
+                // Slowly orbit camera
+                cameraAngle += 0.001;
+                const radius = Math.sqrt(camera.position.x ** 2 + camera.position.z ** 2);
+                camera.position.x = Math.sin(cameraAngle) * radius;
+                camera.position.z = Math.cos(cameraAngle) * radius;
+                camera.lookAt(0, 5, 0);
+
+                // Update UI
+                document.getElementById('objCount').textContent = objects.length;
+            }
 
             renderer.render(scene, camera);
         }
@@ -423,7 +1081,23 @@
             renderer.setSize(window.innerWidth, window.innerHeight);
         });
 
-        animate();
+        // Hide loading screen when ready
+        window.addEventListener('load', () => {
+            setTimeout(() => {
+                document.getElementById('loadingScreen').classList.add('hidden');
+                loadingComplete = true;
+                animate();
+            }, 500);
+        });
+
+        // Start immediately if already loaded
+        if (document.readyState === 'complete') {
+            setTimeout(() => {
+                document.getElementById('loadingScreen').classList.add('hidden');
+                loadingComplete = true;
+                animate();
+            }, 500);
+        }
     </script>
 </body>
 </html>
