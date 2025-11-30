@@ -1,30 +1,311 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-    <title>City Builder 3D</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="description" content="Build and manage your own 3D cyberpunk city with resource management, multiple building types, and strategic gameplay">
+    <meta name="keywords" content="city builder, 3D game, simulation, strategy, cyberpunk">
+    <meta name="author" content="City Builder 3D">
+
+    <!-- Open Graph / Social Media Meta Tags -->
+    <meta property="og:type" content="website">
+    <meta property="og:title" content="City Builder 3D - Cyberpunk City Simulation">
+    <meta property="og:description" content="Build and manage your own 3D cyberpunk city with resource management, multiple building types, and strategic gameplay">
+    <meta property="og:image" content="https://via.placeholder.com/1200x630/000000/00ff88?text=City+Builder+3D">
+    <meta property="og:url" content="">
+
+    <!-- Twitter Card Meta Tags -->
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="City Builder 3D - Cyberpunk City Simulation">
+    <meta name="twitter:description" content="Build and manage your own 3D cyberpunk city with resource management, multiple building types, and strategic gameplay">
+    <meta name="twitter:image" content="https://via.placeholder.com/1200x630/000000/00ff88?text=City+Builder+3D">
+
+    <title>City Builder 3D - Cyberpunk City Simulation</title>
     <style>
+        * {
+            box-sizing: border-box;
+        }
+
         body {
             margin: 0;
             overflow: hidden;
             font-family: 'Courier New', monospace;
             background: #000;
+            touch-action: none;
         }
+
+        /* Loading Screen */
+        #loading-screen {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: #000;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 10000;
+            transition: opacity 0.5s;
+        }
+
+        #loading-screen.hidden {
+            opacity: 0;
+            pointer-events: none;
+        }
+
+        .spinner {
+            width: 60px;
+            height: 60px;
+            border: 4px solid rgba(0, 255, 136, 0.1);
+            border-top: 4px solid #00ff88;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .loading-text {
+            color: #00ff88;
+            margin-top: 20px;
+            font-size: 18px;
+            text-shadow: 0 0 10px #00ff88;
+        }
+
+        /* HUD */
         #hud {
             position: absolute;
             top: 10px;
             left: 10px;
             color: #00ff88;
-            background: rgba(0, 0, 0, 0.9);
+            background: rgba(0, 0, 0, 0.95);
             padding: 15px;
             border: 2px solid #00ff88;
             border-radius: 8px;
             font-size: 14px;
             z-index: 100;
+            box-shadow: 0 0 20px rgba(0, 255, 136, 0.3);
         }
+
+        .hud-title {
+            font-size: 16px;
+            margin-bottom: 10px;
+            text-shadow: 0 0 10px #00ff88;
+            border-bottom: 1px solid #00ff88;
+            padding-bottom: 5px;
+        }
+
         .resource {
             margin: 5px 0;
             font-size: 12px;
+            display: flex;
+            justify-content: space-between;
+            gap: 10px;
         }
+
+        /* FPS Counter */
+        #fps-counter {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            color: #00ff88;
+            background: rgba(0, 0, 0, 0.95);
+            padding: 10px 15px;
+            border: 2px solid #00ff88;
+            border-radius: 8px;
+            font-size: 14px;
+            z-index: 100;
+            display: none;
+            box-shadow: 0 0 20px rgba(0, 255, 136, 0.3);
+        }
+
+        #fps-counter.visible {
+            display: block;
+        }
+
+        /* Pause Indicator */
+        #pause-indicator {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            color: #00ff88;
+            background: rgba(0, 0, 0, 0.95);
+            padding: 30px 60px;
+            border: 3px solid #00ff88;
+            border-radius: 12px;
+            font-size: 32px;
+            z-index: 200;
+            display: none;
+            box-shadow: 0 0 30px rgba(0, 255, 136, 0.5);
+            text-shadow: 0 0 15px #00ff88;
+        }
+
+        #pause-indicator.visible {
+            display: block;
+        }
+
+        /* Settings Panel */
+        #settings-panel {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            color: #00ff88;
+            background: rgba(0, 0, 0, 0.98);
+            padding: 30px;
+            border: 3px solid #00ff88;
+            border-radius: 12px;
+            z-index: 300;
+            display: none;
+            min-width: 400px;
+            max-width: 90vw;
+            box-shadow: 0 0 40px rgba(0, 255, 136, 0.5);
+        }
+
+        #settings-panel.visible {
+            display: block;
+        }
+
+        .settings-title {
+            font-size: 24px;
+            margin-bottom: 20px;
+            text-align: center;
+            text-shadow: 0 0 15px #00ff88;
+            border-bottom: 2px solid #00ff88;
+            padding-bottom: 10px;
+        }
+
+        .setting-item {
+            margin: 20px 0;
+        }
+
+        .setting-label {
+            display: block;
+            margin-bottom: 8px;
+            font-size: 14px;
+        }
+
+        .setting-buttons {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        .setting-btn {
+            background: rgba(0, 255, 136, 0.2);
+            border: 2px solid #00ff88;
+            color: #00ff88;
+            padding: 10px 20px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+            transition: all 0.3s;
+            flex: 1;
+            min-width: 80px;
+        }
+
+        .setting-btn:hover {
+            background: rgba(0, 255, 136, 0.4);
+            transform: translateY(-2px);
+            box-shadow: 0 0 15px rgba(0, 255, 136, 0.4);
+        }
+
+        .setting-btn.active {
+            background: rgba(0, 255, 136, 0.6);
+            border-width: 3px;
+            box-shadow: 0 0 20px rgba(0, 255, 136, 0.6);
+        }
+
+        .save-load-buttons {
+            display: flex;
+            gap: 10px;
+            margin-top: 25px;
+        }
+
+        .action-btn {
+            background: rgba(0, 255, 136, 0.3);
+            border: 2px solid #00ff88;
+            color: #00ff88;
+            padding: 12px 24px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-family: 'Courier New', monospace;
+            font-size: 14px;
+            transition: all 0.3s;
+            flex: 1;
+        }
+
+        .action-btn:hover {
+            background: rgba(0, 255, 136, 0.5);
+            transform: translateY(-2px);
+            box-shadow: 0 0 20px rgba(0, 255, 136, 0.5);
+        }
+
+        /* Help Overlay */
+        #help-overlay {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            color: #00ff88;
+            background: rgba(0, 0, 0, 0.98);
+            padding: 30px;
+            border: 3px solid #00ff88;
+            border-radius: 12px;
+            z-index: 300;
+            display: none;
+            min-width: 500px;
+            max-width: 90vw;
+            max-height: 90vh;
+            overflow-y: auto;
+            box-shadow: 0 0 40px rgba(0, 255, 136, 0.5);
+        }
+
+        #help-overlay.visible {
+            display: block;
+        }
+
+        .help-title {
+            font-size: 24px;
+            margin-bottom: 20px;
+            text-align: center;
+            text-shadow: 0 0 15px #00ff88;
+            border-bottom: 2px solid #00ff88;
+            padding-bottom: 10px;
+        }
+
+        .help-section {
+            margin: 15px 0;
+        }
+
+        .help-section-title {
+            font-size: 16px;
+            margin-bottom: 10px;
+            color: #88ff88;
+        }
+
+        .help-item {
+            margin: 8px 0;
+            padding: 5px 0;
+            font-size: 13px;
+            display: flex;
+            justify-content: space-between;
+            gap: 20px;
+        }
+
+        .help-key {
+            color: #00ff88;
+            font-weight: bold;
+            min-width: 100px;
+        }
+
+        /* Building Toolbar */
         #buildings {
             position: absolute;
             bottom: 10px;
@@ -36,6 +317,7 @@
             justify-content: center;
             z-index: 100;
         }
+
         .building-btn {
             background: rgba(0, 255, 136, 0.2);
             border: 2px solid #00ff88;
@@ -47,118 +329,418 @@
             font-size: 11px;
             transition: all 0.3s;
             text-align: center;
+            box-shadow: 0 0 10px rgba(0, 255, 136, 0.2);
         }
+
         .building-btn:hover {
             background: rgba(0, 255, 136, 0.4);
             transform: translateY(-2px);
+            box-shadow: 0 0 20px rgba(0, 255, 136, 0.4);
         }
+
         .building-btn.active {
             background: rgba(0, 255, 136, 0.6);
             border-width: 3px;
+            box-shadow: 0 0 25px rgba(0, 255, 136, 0.6);
         }
+
         .building-btn.disabled {
             opacity: 0.3;
             cursor: not-allowed;
         }
+
+        .building-btn.disabled:hover {
+            transform: none;
+            box-shadow: 0 0 10px rgba(0, 255, 136, 0.2);
+        }
+
         .cost {
             font-size: 9px;
             color: #88ff88;
         }
-        #info {
+
+        .shortcut-key {
+            font-size: 8px;
+            color: #66dd66;
+            margin-top: 2px;
+        }
+
+        /* Mobile Controls */
+        #mobile-controls {
             position: absolute;
-            top: 10px;
+            bottom: 120px;
             right: 10px;
+            display: none;
+            flex-direction: column;
+            gap: 10px;
+            z-index: 100;
+        }
+
+        @media (max-width: 768px) {
+            #mobile-controls {
+                display: flex;
+            }
+        }
+
+        .mobile-btn {
+            background: rgba(0, 255, 136, 0.3);
+            border: 2px solid #00ff88;
             color: #00ff88;
-            background: rgba(0, 0, 0, 0.9);
             padding: 15px;
+            border-radius: 50%;
+            cursor: pointer;
+            font-size: 20px;
+            width: 60px;
+            height: 60px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 0 15px rgba(0, 255, 136, 0.3);
+            touch-action: manipulation;
+        }
+
+        .mobile-btn:active {
+            background: rgba(0, 255, 136, 0.6);
+            transform: scale(0.95);
+        }
+
+        /* Notifications */
+        #notification {
+            position: absolute;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            color: #00ff88;
+            background: rgba(0, 0, 0, 0.95);
+            padding: 15px 30px;
             border: 2px solid #00ff88;
             border-radius: 8px;
-            font-size: 12px;
-            z-index: 100;
-            max-width: 200px;
+            z-index: 400;
+            display: none;
+            box-shadow: 0 0 30px rgba(0, 255, 136, 0.5);
+            text-shadow: 0 0 10px #00ff88;
         }
-        .hint {
-            font-size: 10px;
-            color: #88ff88;
-            margin-top: 3px;
+
+        #notification.visible {
+            display: block;
+            animation: slideDown 0.3s ease-out;
+        }
+
+        @keyframes slideDown {
+            from {
+                transform: translateX(-50%) translateY(-100%);
+                opacity: 0;
+            }
+            to {
+                transform: translateX(-50%) translateY(0);
+                opacity: 1;
+            }
+        }
+
+        /* Responsive Styles */
+        @media (max-width: 768px) {
+            #hud {
+                font-size: 11px;
+                padding: 10px;
+            }
+
+            .hud-title {
+                font-size: 13px;
+            }
+
+            .resource {
+                font-size: 10px;
+            }
+
+            .building-btn {
+                padding: 8px 10px;
+                font-size: 9px;
+            }
+
+            #settings-panel {
+                min-width: 300px;
+                padding: 20px;
+            }
+
+            #help-overlay {
+                min-width: 300px;
+                padding: 20px;
+            }
         }
     </style>
 </head>
 <body>
+    <!-- Loading Screen -->
+    <div id="loading-screen">
+        <div class="spinner"></div>
+        <div class="loading-text">INITIALIZING CITY BUILDER...</div>
+    </div>
+
+    <!-- HUD -->
     <div id="hud">
-        <div style="font-size: 16px; margin-bottom: 10px;">🏙️ CITY BUILDER</div>
-        <div class="resource">💰 Money: <span id="money">1000</span></div>
-        <div class="resource">👥 Population: <span id="population">0</span></div>
-        <div class="resource">🏭 Industry: <span id="industry">0</span></div>
-        <div class="resource">⚡ Power: <span id="power">0</span>/<span id="powerNeed">0</span></div>
-        <div class="resource">😊 Happiness: <span id="happiness">100</span>%</div>
+        <div class="hud-title">CITY BUILDER 3D</div>
+        <div class="resource">
+            <span>Money:</span>
+            <span id="money">1000</span>
+        </div>
+        <div class="resource">
+            <span>Population:</span>
+            <span id="population">0</span>
+        </div>
+        <div class="resource">
+            <span>Industry:</span>
+            <span id="industry">0</span>
+        </div>
+        <div class="resource" id="power-display">
+            <span>Power:</span>
+            <span><span id="power">0</span>/<span id="powerNeed">0</span></span>
+        </div>
+        <div class="resource">
+            <span>Happiness:</span>
+            <span id="happiness">100</span>%
+        </div>
+        <div class="resource">
+            <span>Buildings:</span>
+            <span><span id="buildingCount">0</span>/100</span>
+        </div>
     </div>
 
-    <div id="info">
-        <div style="font-weight: bold; margin-bottom: 5px;">Controls:</div>
-        <div class="hint">🖱️ Click: Place building</div>
-        <div class="hint">🗑️ Right-click: Remove</div>
-        <div class="hint">🔄 Mouse: Rotate view</div>
-        <div class="hint">🔍 Wheel: Zoom</div>
-        <div style="margin-top: 10px; font-size: 10px;">Buildings: <span id="buildingCount">0</span>/100</div>
+    <!-- FPS Counter -->
+    <div id="fps-counter">FPS: <span id="fps-value">60</span></div>
+
+    <!-- Pause Indicator -->
+    <div id="pause-indicator">PAUSED</div>
+
+    <!-- Notification -->
+    <div id="notification"></div>
+
+    <!-- Settings Panel -->
+    <div id="settings-panel">
+        <div class="settings-title">SETTINGS</div>
+
+        <div class="setting-item">
+            <div class="setting-label">Game Speed:</div>
+            <div class="setting-buttons">
+                <button class="setting-btn active" data-speed="1">1x</button>
+                <button class="setting-btn" data-speed="2">2x</button>
+                <button class="setting-btn" data-speed="3">3x</button>
+            </div>
+        </div>
+
+        <div class="setting-item">
+            <div class="setting-label">Graphics Quality:</div>
+            <div class="setting-buttons">
+                <button class="setting-btn" data-quality="low">Low</button>
+                <button class="setting-btn active" data-quality="medium">Medium</button>
+                <button class="setting-btn" data-quality="high">High</button>
+            </div>
+        </div>
+
+        <div class="setting-item">
+            <div class="setting-label">Sound:</div>
+            <div class="setting-buttons">
+                <button class="setting-btn active" data-sound="on">On</button>
+                <button class="setting-btn" data-sound="off">Off</button>
+            </div>
+        </div>
+
+        <div class="save-load-buttons">
+            <button class="action-btn" id="save-game">SAVE GAME</button>
+            <button class="action-btn" id="load-game">LOAD GAME</button>
+        </div>
+
+        <div style="margin-top: 20px; text-align: center; font-size: 11px; color: #88ff88;">
+            Press ESC to close
+        </div>
     </div>
 
+    <!-- Help Overlay -->
+    <div id="help-overlay">
+        <div class="help-title">KEYBOARD SHORTCUTS</div>
+
+        <div class="help-section">
+            <div class="help-section-title">Game Controls:</div>
+            <div class="help-item">
+                <span class="help-key">P</span>
+                <span>Pause/Resume Game</span>
+            </div>
+            <div class="help-item">
+                <span class="help-key">ESC</span>
+                <span>Settings Panel</span>
+            </div>
+            <div class="help-item">
+                <span class="help-key">H</span>
+                <span>Show/Hide Help</span>
+            </div>
+            <div class="help-item">
+                <span class="help-key">F</span>
+                <span>Toggle FPS Counter</span>
+            </div>
+        </div>
+
+        <div class="help-section">
+            <div class="help-section-title">Building Shortcuts:</div>
+            <div class="help-item">
+                <span class="help-key">1</span>
+                <span>Select House</span>
+            </div>
+            <div class="help-item">
+                <span class="help-key">2</span>
+                <span>Select Apartment</span>
+            </div>
+            <div class="help-item">
+                <span class="help-key">3</span>
+                <span>Select Factory</span>
+            </div>
+            <div class="help-item">
+                <span class="help-key">4</span>
+                <span>Select Office</span>
+            </div>
+            <div class="help-item">
+                <span class="help-key">5</span>
+                <span>Select Power Plant</span>
+            </div>
+            <div class="help-item">
+                <span class="help-key">6</span>
+                <span>Select Park</span>
+            </div>
+            <div class="help-item">
+                <span class="help-key">7</span>
+                <span>Select Shop</span>
+            </div>
+        </div>
+
+        <div class="help-section">
+            <div class="help-section-title">Mouse Controls:</div>
+            <div class="help-item">
+                <span class="help-key">Left Click</span>
+                <span>Place Building</span>
+            </div>
+            <div class="help-item">
+                <span class="help-key">Right Click</span>
+                <span>Remove Building (50% refund)</span>
+            </div>
+            <div class="help-item">
+                <span class="help-key">Middle Drag</span>
+                <span>Rotate Camera</span>
+            </div>
+            <div class="help-item">
+                <span class="help-key">Mouse Wheel</span>
+                <span>Zoom In/Out</span>
+            </div>
+        </div>
+
+        <div class="help-section">
+            <div class="help-section-title">Mobile Controls:</div>
+            <div class="help-item">
+                <span class="help-key">Single Touch</span>
+                <span>Select Tile</span>
+            </div>
+            <div class="help-item">
+                <span class="help-key">Two Finger Drag</span>
+                <span>Rotate Camera</span>
+            </div>
+            <div class="help-item">
+                <span class="help-key">Pinch</span>
+                <span>Zoom In/Out</span>
+            </div>
+        </div>
+
+        <div style="margin-top: 20px; text-align: center; font-size: 11px; color: #88ff88;">
+            Press H to close
+        </div>
+    </div>
+
+    <!-- Building Toolbar -->
     <div id="buildings">
-        <button class="building-btn" data-type="house" data-cost="100">
-            🏠 House<br><span class="cost">$100 | +5👥</span>
+        <button class="building-btn" data-type="house" data-cost="100" data-key="1">
+            House<br><span class="cost">$100 | +5 Pop</span><br><span class="shortcut-key">[1]</span>
         </button>
-        <button class="building-btn" data-type="apartment" data-cost="300">
-            🏢 Apartment<br><span class="cost">$300 | +20👥</span>
+        <button class="building-btn" data-type="apartment" data-cost="300" data-key="2">
+            Apartment<br><span class="cost">$300 | +20 Pop</span><br><span class="shortcut-key">[2]</span>
         </button>
-        <button class="building-btn" data-type="factory" data-cost="500">
-            🏭 Factory<br><span class="cost">$500 | +$50/s</span>
+        <button class="building-btn" data-type="factory" data-cost="500" data-key="3">
+            Factory<br><span class="cost">$500 | +$50/s</span><br><span class="shortcut-key">[3]</span>
         </button>
-        <button class="building-btn" data-type="office" data-cost="400">
-            🏛️ Office<br><span class="cost">$400 | +$30/s</span>
+        <button class="building-btn" data-type="office" data-cost="400" data-key="4">
+            Office<br><span class="cost">$400 | +$30/s</span><br><span class="shortcut-key">[4]</span>
         </button>
-        <button class="building-btn" data-type="power" data-cost="600">
-            ⚡ Power Plant<br><span class="cost">$600 | +100⚡</span>
+        <button class="building-btn" data-type="power" data-cost="600" data-key="5">
+            Power Plant<br><span class="cost">$600 | +100 Power</span><br><span class="shortcut-key">[5]</span>
         </button>
-        <button class="building-btn" data-type="park" data-cost="200">
-            🌳 Park<br><span class="cost">$200 | +10😊</span>
+        <button class="building-btn" data-type="park" data-cost="200" data-key="6">
+            Park<br><span class="cost">$200 | +10 Happy</span><br><span class="shortcut-key">[6]</span>
         </button>
-        <button class="building-btn" data-type="shop" data-cost="250">
-            🏪 Shop<br><span class="cost">$250 | +$20/s</span>
+        <button class="building-btn" data-type="shop" data-cost="250" data-key="7">
+            Shop<br><span class="cost">$250 | +$20/s</span><br><span class="shortcut-key">[7]</span>
         </button>
+    </div>
+
+    <!-- Mobile Controls -->
+    <div id="mobile-controls">
+        <button class="mobile-btn" id="mobile-place">+</button>
+        <button class="mobile-btn" id="mobile-remove">-</button>
     </div>
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     <script>
+        // Game Settings
+        const settings = {
+            gameSpeed: 1,
+            quality: 'medium',
+            sound: true,
+            showFPS: false,
+            isPaused: false
+        };
+
+        // Show notification
+        function showNotification(message, duration = 2000) {
+            const notification = document.getElementById('notification');
+            notification.textContent = message;
+            notification.classList.add('visible');
+            setTimeout(() => {
+                notification.classList.remove('visible');
+            }, duration);
+        }
+
         // Scene setup
         const scene = new THREE.Scene();
-        scene.background = new THREE.Color(0x87ceeb);
-        scene.fog = new THREE.Fog(0x87ceeb, 50, 200);
+        scene.background = new THREE.Color(0x001a0f);
+        scene.fog = new THREE.Fog(0x001a0f, 50, 200);
 
         const camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 1000);
         camera.position.set(30, 40, 30);
         camera.lookAt(0, 0, 0);
 
-        const renderer = new THREE.WebGLRenderer({ antialias: true });
+        const renderer = new THREE.WebGLRenderer({ antialias: settings.quality !== 'low' });
         renderer.setSize(window.innerWidth, window.innerHeight);
-        renderer.shadowMap.enabled = true;
+        renderer.shadowMap.enabled = settings.quality !== 'low';
+        renderer.shadowMap.type = settings.quality === 'high' ? THREE.PCFSoftShadowMap : THREE.BasicShadowMap;
         document.body.appendChild(renderer.domElement);
 
-        // Lighting
-        const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
+        // Lighting with cyberpunk glow
+        const ambientLight = new THREE.AmbientLight(0x00ff88, 0.3);
         scene.add(ambientLight);
 
-        const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8);
+        const directionalLight = new THREE.DirectionalLight(0xffffff, 0.6);
         directionalLight.position.set(50, 50, 50);
-        directionalLight.castShadow = true;
-        directionalLight.shadow.camera.left = -50;
-        directionalLight.shadow.camera.right = 50;
-        directionalLight.shadow.camera.top = 50;
-        directionalLight.shadow.camera.bottom = -50;
-        directionalLight.shadow.mapSize.width = 2048;
-        directionalLight.shadow.mapSize.height = 2048;
+        directionalLight.castShadow = settings.quality !== 'low';
+        if (settings.quality !== 'low') {
+            directionalLight.shadow.camera.left = -50;
+            directionalLight.shadow.camera.right = 50;
+            directionalLight.shadow.camera.top = 50;
+            directionalLight.shadow.camera.bottom = -50;
+            directionalLight.shadow.mapSize.width = settings.quality === 'high' ? 2048 : 1024;
+            directionalLight.shadow.mapSize.height = settings.quality === 'high' ? 2048 : 1024;
+        }
         scene.add(directionalLight);
 
-        // Ground
+        // Neon accent light
+        const neonLight = new THREE.PointLight(0x00ff88, 1, 100);
+        neonLight.position.set(0, 30, 0);
+        scene.add(neonLight);
+
+        // Ground with cyberpunk grid
         const gridSize = 40;
         const grid = [];
 
@@ -168,13 +750,15 @@
                 const geometry = new THREE.PlaneGeometry(1, 1);
                 const isEven = (x + z) % 2 === 0;
                 const material = new THREE.MeshPhongMaterial({
-                    color: isEven ? 0x2d5016 : 0x3a6018,
-                    side: THREE.DoubleSide
+                    color: isEven ? 0x0a2a1a : 0x0d3320,
+                    side: THREE.DoubleSide,
+                    emissive: 0x00ff88,
+                    emissiveIntensity: 0.05
                 });
                 const tile = new THREE.Mesh(geometry, material);
                 tile.rotation.x = -Math.PI / 2;
                 tile.position.set(x - gridSize / 2, 0, z - gridSize / 2);
-                tile.receiveShadow = true;
+                tile.receiveShadow = settings.quality !== 'low';
                 scene.add(tile);
                 grid[x][z] = { tile, building: null };
             }
@@ -192,38 +776,38 @@
             buildings: []
         };
 
-        // Building types
+        // Building types with cyberpunk colors
         const buildingTypes = {
             house: {
-                color: 0xff6b6b,
+                color: 0xff3366,
                 height: 2,
                 population: 5,
                 powerNeed: 2,
                 income: 5
             },
             apartment: {
-                color: 0x4ecdc4,
+                color: 0x00ccff,
                 height: 5,
                 population: 20,
                 powerNeed: 10,
                 income: 15
             },
             factory: {
-                color: 0x95a5a6,
+                color: 0x9900ff,
                 height: 4,
                 population: 0,
                 powerNeed: 20,
                 income: 50
             },
             office: {
-                color: 0x3498db,
+                color: 0x0099ff,
                 height: 6,
                 population: 0,
                 powerNeed: 15,
                 income: 30
             },
             power: {
-                color: 0xf39c12,
+                color: 0xffcc00,
                 height: 3,
                 population: 0,
                 powerNeed: 0,
@@ -231,7 +815,7 @@
                 powerGen: 100
             },
             park: {
-                color: 0x27ae60,
+                color: 0x00ff88,
                 height: 0.5,
                 population: 0,
                 powerNeed: 1,
@@ -239,7 +823,7 @@
                 happiness: 10
             },
             shop: {
-                color: 0xe74c3c,
+                color: 0xff0099,
                 height: 2.5,
                 population: 0,
                 powerNeed: 5,
@@ -254,17 +838,21 @@
                 this.gridX = gridX;
                 this.gridZ = gridZ;
 
-                // Create building mesh
+                // Create building mesh with glow
                 const geometry = new THREE.BoxGeometry(0.9, this.stats.height, 0.9);
-                const material = new THREE.MeshPhongMaterial({ color: this.stats.color });
+                const material = new THREE.MeshPhongMaterial({
+                    color: this.stats.color,
+                    emissive: this.stats.color,
+                    emissiveIntensity: 0.2
+                });
                 this.mesh = new THREE.Mesh(geometry, material);
                 this.mesh.position.set(
                     gridX - gridSize / 2,
                     this.stats.height / 2,
                     gridZ - gridSize / 2
                 );
-                this.mesh.castShadow = true;
-                this.mesh.receiveShadow = true;
+                this.mesh.castShadow = settings.quality !== 'low';
+                this.mesh.receiveShadow = settings.quality !== 'low';
                 scene.add(this.mesh);
 
                 // Add to game state
@@ -284,13 +872,15 @@
             }
 
             update() {
+                if (settings.isPaused) return;
+
                 // Grow animation
                 if (this.mesh.scale.y < this.targetScale) {
                     this.mesh.scale.y = Math.min(this.mesh.scale.y + 0.05, this.targetScale);
                     this.mesh.position.y = (this.stats.height / 2) * this.mesh.scale.y;
                 }
 
-                // Bounce animation
+                // Subtle rotation
                 this.mesh.rotation.y += 0.001;
             }
 
@@ -306,6 +896,14 @@
                 const idx = gameState.buildings.indexOf(this);
                 if (idx > -1) gameState.buildings.splice(idx, 1);
             }
+
+            serialize() {
+                return {
+                    type: this.type,
+                    gridX: this.gridX,
+                    gridZ: this.gridZ
+                };
+            }
         }
 
         // Mouse interaction
@@ -313,9 +911,9 @@
         const mouse = new THREE.Vector2();
         let hoveredTile = null;
 
-        renderer.domElement.addEventListener('mousemove', (event) => {
-            mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
-            mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
+        function updateMousePosition(clientX, clientY) {
+            mouse.x = (clientX / window.innerWidth) * 2 - 1;
+            mouse.y = -(clientY / window.innerHeight) * 2 + 1;
 
             raycaster.setFromCamera(mouse, camera);
 
@@ -326,7 +924,7 @@
             // Reset previous hover
             if (hoveredTile) {
                 const isEven = (hoveredTile.x + hoveredTile.z) % 2 === 0;
-                hoveredTile.tile.material.color.setHex(isEven ? 0x2d5016 : 0x3a6018);
+                hoveredTile.tile.material.color.setHex(isEven ? 0x0a2a1a : 0x0d3320);
                 hoveredTile = null;
             }
 
@@ -337,12 +935,16 @@
 
                 if (gridX >= 0 && gridX < gridSize && gridZ >= 0 && gridZ < gridSize) {
                     hoveredTile = { x: gridX, z: gridZ, tile: grid[gridX][gridZ].tile };
-                    hoveredTile.tile.material.color.setHex(0xffff88);
+                    hoveredTile.tile.material.color.setHex(0x00ff88);
                 }
             }
+        }
+
+        renderer.domElement.addEventListener('mousemove', (event) => {
+            updateMousePosition(event.clientX, event.clientY);
         });
 
-        renderer.domElement.addEventListener('click', () => {
+        function placeBuilding() {
             if (hoveredTile && gameState.selectedBuilding) {
                 const { x, z } = hoveredTile;
 
@@ -354,13 +956,17 @@
                         new Building(gameState.selectedBuilding, x, z);
                         gameState.money -= cost;
                         updateHUD();
+                        showNotification('Building placed!', 1000);
+                    } else if (gameState.money < cost) {
+                        showNotification('Not enough money!', 1500);
+                    } else {
+                        showNotification('Maximum buildings reached!', 1500);
                     }
                 }
             }
-        });
+        }
 
-        renderer.domElement.addEventListener('contextmenu', (e) => {
-            e.preventDefault();
+        function removeBuilding() {
             if (hoveredTile) {
                 const building = grid[hoveredTile.x][hoveredTile.z].building;
                 if (building) {
@@ -369,9 +975,74 @@
                     gameState.money += refund;
                     building.remove();
                     updateHUD();
+                    showNotification(`Building removed! +$${refund}`, 1000);
                 }
             }
+        }
+
+        renderer.domElement.addEventListener('click', placeBuilding);
+
+        renderer.domElement.addEventListener('contextmenu', (e) => {
+            e.preventDefault();
+            removeBuilding();
         });
+
+        // Touch controls
+        let touchStartDistance = 0;
+        let touchStartAngle = 0;
+        let lastTouchX = 0;
+        let lastTouchY = 0;
+        let isTwoFingerTouch = false;
+
+        renderer.domElement.addEventListener('touchstart', (e) => {
+            if (e.touches.length === 1) {
+                isTwoFingerTouch = false;
+                const touch = e.touches[0];
+                updateMousePosition(touch.clientX, touch.clientY);
+                lastTouchX = touch.clientX;
+                lastTouchY = touch.clientY;
+            } else if (e.touches.length === 2) {
+                isTwoFingerTouch = true;
+                const dx = e.touches[0].clientX - e.touches[1].clientX;
+                const dy = e.touches[0].clientY - e.touches[1].clientY;
+                touchStartDistance = Math.sqrt(dx * dx + dy * dy);
+
+                const midX = (e.touches[0].clientX + e.touches[1].clientX) / 2;
+                lastTouchX = midX;
+            }
+        }, { passive: true });
+
+        renderer.domElement.addEventListener('touchmove', (e) => {
+            e.preventDefault();
+
+            if (e.touches.length === 1 && !isTwoFingerTouch) {
+                const touch = e.touches[0];
+                updateMousePosition(touch.clientX, touch.clientY);
+            } else if (e.touches.length === 2) {
+                // Pinch zoom
+                const dx = e.touches[0].clientX - e.touches[1].clientX;
+                const dy = e.touches[0].clientY - e.touches[1].clientY;
+                const distance = Math.sqrt(dx * dx + dy * dy);
+                const delta = touchStartDistance - distance;
+                cameraDistance = Math.max(20, Math.min(80, cameraDistance + delta * 0.1));
+                touchStartDistance = distance;
+
+                // Two finger rotate
+                const midX = (e.touches[0].clientX + e.touches[1].clientX) / 2;
+                const deltaX = midX - lastTouchX;
+                cameraAngle -= deltaX * 0.01;
+                lastTouchX = midX;
+            }
+        }, { passive: false });
+
+        renderer.domElement.addEventListener('touchend', (e) => {
+            if (e.touches.length === 0 && !isTwoFingerTouch) {
+                placeBuilding();
+            }
+            if (e.touches.length < 2) {
+                isTwoFingerTouch = false;
+            }
+        }, { passive: true });
 
         // Building selection
         document.querySelectorAll('.building-btn').forEach(btn => {
@@ -413,17 +1084,178 @@
         renderer.domElement.addEventListener('wheel', (e) => {
             e.preventDefault();
             cameraDistance = Math.max(20, Math.min(80, cameraDistance + e.deltaY * 0.05));
+        }, { passive: false });
+
+        // Keyboard controls
+        document.addEventListener('keydown', (e) => {
+            // Building shortcuts (1-7)
+            if (e.key >= '1' && e.key <= '7') {
+                const buttons = document.querySelectorAll('.building-btn');
+                const index = parseInt(e.key) - 1;
+                if (buttons[index]) {
+                    buttons[index].click();
+                }
+            }
+
+            // Pause (P)
+            if (e.key.toLowerCase() === 'p') {
+                settings.isPaused = !settings.isPaused;
+                document.getElementById('pause-indicator').classList.toggle('visible', settings.isPaused);
+                showNotification(settings.isPaused ? 'Game Paused' : 'Game Resumed', 1000);
+            }
+
+            // FPS Counter (F)
+            if (e.key.toLowerCase() === 'f') {
+                settings.showFPS = !settings.showFPS;
+                document.getElementById('fps-counter').classList.toggle('visible', settings.showFPS);
+            }
+
+            // Help (H)
+            if (e.key.toLowerCase() === 'h') {
+                const helpOverlay = document.getElementById('help-overlay');
+                helpOverlay.classList.toggle('visible');
+            }
+
+            // Settings (ESC)
+            if (e.key === 'Escape') {
+                const settingsPanel = document.getElementById('settings-panel');
+                const helpOverlay = document.getElementById('help-overlay');
+
+                if (helpOverlay.classList.contains('visible')) {
+                    helpOverlay.classList.remove('visible');
+                } else {
+                    settingsPanel.classList.toggle('visible');
+                }
+            }
         });
 
-        // Income generation
-        setInterval(() => {
-            if (gameState.power >= gameState.powerNeed) {
-                gameState.money += gameState.industry / 10;
+        // Settings panel controls
+        document.querySelectorAll('[data-speed]').forEach(btn => {
+            btn.addEventListener('click', () => {
+                document.querySelectorAll('[data-speed]').forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                settings.gameSpeed = parseInt(btn.dataset.speed);
+                showNotification(`Game speed: ${settings.gameSpeed}x`, 1000);
+            });
+        });
+
+        document.querySelectorAll('[data-quality]').forEach(btn => {
+            btn.addEventListener('click', () => {
+                document.querySelectorAll('[data-quality]').forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                settings.quality = btn.dataset.quality;
+
+                // Update renderer quality
+                renderer.shadowMap.enabled = settings.quality !== 'low';
+                renderer.shadowMap.type = settings.quality === 'high' ? THREE.PCFSoftShadowMap : THREE.BasicShadowMap;
+                directionalLight.castShadow = settings.quality !== 'low';
+
+                if (settings.quality !== 'low') {
+                    directionalLight.shadow.mapSize.width = settings.quality === 'high' ? 2048 : 1024;
+                    directionalLight.shadow.mapSize.height = settings.quality === 'high' ? 2048 : 1024;
+                }
+
+                showNotification(`Graphics: ${settings.quality}`, 1000);
+            });
+        });
+
+        document.querySelectorAll('[data-sound]').forEach(btn => {
+            btn.addEventListener('click', () => {
+                document.querySelectorAll('[data-sound]').forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                settings.sound = btn.dataset.sound === 'on';
+                showNotification(`Sound: ${settings.sound ? 'On' : 'Off'}`, 1000);
+            });
+        });
+
+        // Save/Load functionality
+        document.getElementById('save-game').addEventListener('click', () => {
+            const saveData = {
+                gameState: {
+                    money: gameState.money,
+                    population: gameState.population,
+                    industry: gameState.industry,
+                    power: gameState.power,
+                    powerNeed: gameState.powerNeed,
+                    happiness: gameState.happiness
+                },
+                buildings: gameState.buildings.map(b => b.serialize()),
+                settings: settings,
+                timestamp: Date.now()
+            };
+
+            localStorage.setItem('cityBuilderSave', JSON.stringify(saveData));
+            showNotification('Game Saved!', 1500);
+        });
+
+        document.getElementById('load-game').addEventListener('click', () => {
+            const saveData = localStorage.getItem('cityBuilderSave');
+
+            if (saveData) {
+                const data = JSON.parse(saveData);
+
+                // Clear existing buildings
+                [...gameState.buildings].forEach(b => b.remove());
+
+                // Restore game state
+                gameState.money = data.gameState.money;
+                gameState.population = data.gameState.population;
+                gameState.industry = data.gameState.industry;
+                gameState.power = data.gameState.power;
+                gameState.powerNeed = data.gameState.powerNeed;
+                gameState.happiness = data.gameState.happiness;
+
+                // Restore buildings
+                data.buildings.forEach(buildingData => {
+                    new Building(buildingData.type, buildingData.gridX, buildingData.gridZ);
+                });
+
+                // Restore settings
+                if (data.settings) {
+                    Object.assign(settings, data.settings);
+
+                    // Update UI
+                    document.querySelectorAll('[data-speed]').forEach(btn => {
+                        btn.classList.toggle('active', parseInt(btn.dataset.speed) === settings.gameSpeed);
+                    });
+                    document.querySelectorAll('[data-quality]').forEach(btn => {
+                        btn.classList.toggle('active', btn.dataset.quality === settings.quality);
+                    });
+                    document.querySelectorAll('[data-sound]').forEach(btn => {
+                        btn.classList.toggle('active', (btn.dataset.sound === 'on') === settings.sound);
+                    });
+                }
+
+                updateHUD();
+                showNotification('Game Loaded!', 1500);
             } else {
-                gameState.happiness = Math.max(0, gameState.happiness - 1);
+                showNotification('No save data found!', 1500);
             }
-            updateHUD();
-        }, 1000);
+        });
+
+        // Mobile control buttons
+        document.getElementById('mobile-place').addEventListener('click', placeBuilding);
+        document.getElementById('mobile-remove').addEventListener('click', removeBuilding);
+
+        // Income generation
+        let incomeTimer = 0;
+
+        function updateIncome(deltaTime) {
+            if (settings.isPaused) return;
+
+            incomeTimer += deltaTime * settings.gameSpeed;
+
+            if (incomeTimer >= 1000) {
+                incomeTimer = 0;
+
+                if (gameState.power >= gameState.powerNeed) {
+                    gameState.money += gameState.industry / 10;
+                } else {
+                    gameState.happiness = Math.max(0, gameState.happiness - 1);
+                }
+                updateHUD();
+            }
+        }
 
         function updateHUD() {
             document.getElementById('money').textContent = Math.floor(gameState.money);
@@ -445,7 +1277,7 @@
             });
 
             // Check power status
-            const powerDisplay = document.getElementById('power').parentElement;
+            const powerDisplay = document.getElementById('power-display');
             if (gameState.power < gameState.powerNeed) {
                 powerDisplay.style.color = '#ff4444';
             } else {
@@ -453,9 +1285,35 @@
             }
         }
 
+        // FPS Counter
+        let lastTime = performance.now();
+        let frames = 0;
+        let fpsTime = 0;
+
+        function updateFPS(deltaTime) {
+            frames++;
+            fpsTime += deltaTime;
+
+            if (fpsTime >= 1000) {
+                document.getElementById('fps-value').textContent = frames;
+                frames = 0;
+                fpsTime = 0;
+            }
+        }
+
         // Animation loop
         function animate() {
             requestAnimationFrame(animate);
+
+            const currentTime = performance.now();
+            const deltaTime = currentTime - lastTime;
+            lastTime = currentTime;
+
+            // Update FPS
+            updateFPS(deltaTime);
+
+            // Update income
+            updateIncome(deltaTime);
 
             // Update buildings
             gameState.buildings.forEach(building => building.update());
@@ -474,6 +1332,14 @@
             camera.aspect = window.innerWidth / window.innerHeight;
             camera.updateProjectionMatrix();
             renderer.setSize(window.innerWidth, window.innerHeight);
+        });
+
+        // Hide loading screen and start game
+        window.addEventListener('load', () => {
+            setTimeout(() => {
+                document.getElementById('loading-screen').classList.add('hidden');
+                showNotification('Press H for help', 3000);
+            }, 1000);
         });
 
         updateHUD();
