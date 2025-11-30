@@ -1,0 +1,436 @@
+################################################################################
+# REPOSITORY USER DEFINED TYPE (UDT) - ISA-95/88 STRUCTURE GUIDE
+# Konomi Games - 3D Interactive Gallery
+#
+# Standard: Based on ISA-95 (Enterprise-Control System Integration) and
+#           ISA-88 (Batch Control) hierarchical patterns
+#
+# Repository: https://github.com/teslasolar/games
+# Pages: https://teslasolar.github.io/games
+################################################################################
+
+[UDT_HEADER]
+name = "KonomiGamesRepository"
+version = "1.0.0"
+standard = "ISA-95/88-Adapted"
+created = "2025-11-30"
+author = "teslasolar"
+
+################################################################################
+# HIERARCHICAL LEVEL DEFINITIONS (ISA-95 Adapted)
+################################################################################
+
+[LEVEL_0: ENTERPRISE]
+# Top-level repository organization
+description = "Root repository level - contains all games and global resources"
+path = "/"
+required_files = [
+    "index.html",       # Main gallery entry point
+    "README.md",        # Repository documentation
+    "repo.udt",         # This structure definition file
+]
+optional_files = [
+    "LICENSE",          # Software license
+    ".gitignore",       # Git ignore rules
+    "CONTRIBUTING.md",  # Contribution guidelines
+    "CHANGELOG.md",     # Version history
+]
+
+[LEVEL_1: SITE]
+# Game category groupings (future expansion)
+description = "Category-based game groupings"
+categories = [
+    "arcade",           # Action-based games (space-shooter, block-breaker)
+    "simulation",       # Simulation games (particle-system, konomi-os, physics-sandbox)
+    "visualization",    # Visual experiences (neural-network, fractal-explorer, music-visualizer)
+    "exploration",      # Exploration games (terrain-explorer, maze-runner)
+    "strategy",         # Strategy games (tower-defense, city-builder)
+    "racing",           # Racing games (neon-racer)
+    "interactive",      # Interactive demos (cube-spinner)
+]
+
+[LEVEL_2: AREA]
+# Individual game modules
+description = "Individual game unit - self-contained playable module"
+path_pattern = "/{game-id}/"
+required_files = [
+    "index.html",       # Standalone playable game
+    "game.db",          # SQLite database with game data
+    "README.md",        # Game-specific documentation
+]
+optional_files = [
+    "config.json",      # Runtime configuration
+    "assets/",          # Asset subdirectory
+    "src/",             # Source code (if separated)
+]
+
+[LEVEL_3: PROCESS_CELL]
+# Game database structure
+description = "SQLite database internal structure"
+database = "game.db"
+required_tables = [
+    "metadata",         # Core game information (KVP store)
+    "source_files",     # HTML/CSS/JS source code
+    "dependencies",     # External library references
+    "controls",         # Input mappings
+    "configuration",    # Game settings
+    "version_history",  # Release changelog
+]
+optional_tables = [
+    "assets",           # Binary asset storage
+    "leaderboards",     # Score tracking (future)
+    "achievements",     # Game achievements (future)
+    "save_states",      # Game saves (future)
+]
+
+[LEVEL_4: UNIT]
+# Individual database records
+description = "Atomic data units within tables"
+
+################################################################################
+# FILE TYPE DEFINITIONS
+################################################################################
+
+[FILE_TYPES]
+
+[[FILE_TYPES.html]]
+extension = ".html"
+mime_type = "text/html"
+location = ["root", "game_subdirectory"]
+purpose = "Entry point and game rendering"
+encoding = "UTF-8"
+
+[[FILE_TYPES.md]]
+extension = ".md"
+mime_type = "text/markdown"
+location = ["root", "game_subdirectory"]
+purpose = "Documentation and legacy game storage"
+encoding = "UTF-8"
+
+[[FILE_TYPES.db]]
+extension = ".db"
+mime_type = "application/x-sqlite3"
+location = ["game_subdirectory"]
+purpose = "Game data storage (SQLite3 format)"
+encoding = "binary"
+
+[[FILE_TYPES.json]]
+extension = ".json"
+mime_type = "application/json"
+location = ["root", "game_subdirectory"]
+purpose = "Configuration and data exchange"
+encoding = "UTF-8"
+
+[[FILE_TYPES.js]]
+extension = ".js"
+mime_type = "application/javascript"
+location = ["game_subdirectory", "assets"]
+purpose = "Game logic and interactions"
+encoding = "UTF-8"
+
+[[FILE_TYPES.css]]
+extension = ".css"
+mime_type = "text/css"
+location = ["game_subdirectory", "assets"]
+purpose = "Styling and visual presentation"
+encoding = "UTF-8"
+
+[[FILE_TYPES.udt]]
+extension = ".udt"
+mime_type = "text/plain"
+location = ["root"]
+purpose = "User Defined Type structure definition"
+encoding = "UTF-8"
+
+[[FILE_TYPES.py]]
+extension = ".py"
+mime_type = "text/x-python"
+location = ["root", "tools"]
+purpose = "Build scripts and automation"
+encoding = "UTF-8"
+
+################################################################################
+# DIRECTORY STRUCTURE TEMPLATE
+################################################################################
+
+[DIRECTORY_TEMPLATE]
+structure = """
+games/                          # LEVEL_0: Enterprise Root
+├── index.html                  # Main gallery entry point
+├── README.md                   # Repository documentation
+├── repo.udt                    # This structure guide
+├── build_databases.py          # Database generation script
+│
+├── {game-id}/                  # LEVEL_2: Area (Game Module)
+│   ├── index.html              # Standalone playable version
+│   ├── game.db                 # SQLite database
+│   ├── README.md               # Game documentation with query functions
+│   └── assets/                 # Optional: separated assets
+│       ├── textures/           # Image assets
+│       ├── models/             # 3D models
+│       └── audio/              # Sound effects and music
+│
+└── {legacy-game}.md            # Legacy: embedded HTML games
+"""
+
+################################################################################
+# DATABASE SCHEMA SPECIFICATION
+################################################################################
+
+[DATABASE_SCHEMA]
+
+[[DATABASE_SCHEMA.metadata]]
+description = "Key-value store for game information"
+columns = [
+    { name = "key", type = "TEXT", primary = true },
+    { name = "value", type = "TEXT" },
+    { name = "data_type", type = "TEXT", default = "string" },
+    { name = "updated_at", type = "TEXT" },
+]
+required_keys = [
+    "id",               # Unique game identifier
+    "name",             # Display name
+    "description",      # Game description
+    "icon",             # Emoji icon
+    "category",         # Game category
+    "engine",           # Game engine (Three.js)
+    "platform",         # Target platform (web)
+]
+
+[[DATABASE_SCHEMA.source_files]]
+description = "Source code storage"
+columns = [
+    { name = "id", type = "INTEGER", primary = true, autoincrement = true },
+    { name = "filename", type = "TEXT", required = true },
+    { name = "file_type", type = "TEXT", required = true },
+    { name = "content", type = "TEXT" },
+    { name = "size_bytes", type = "INTEGER" },
+    { name = "checksum", type = "TEXT" },
+    { name = "created_at", type = "TEXT" },
+    { name = "updated_at", type = "TEXT" },
+]
+file_types = ["html", "css", "javascript", "markdown"]
+
+[[DATABASE_SCHEMA.assets]]
+description = "Binary asset storage"
+columns = [
+    { name = "id", type = "INTEGER", primary = true, autoincrement = true },
+    { name = "name", type = "TEXT", required = true },
+    { name = "asset_type", type = "TEXT", required = true },
+    { name = "mime_type", type = "TEXT" },
+    { name = "data", type = "BLOB" },
+    { name = "url", type = "TEXT" },
+    { name = "size_bytes", type = "INTEGER" },
+    { name = "created_at", type = "TEXT" },
+]
+asset_types = ["image", "audio", "model", "font", "shader"]
+
+[[DATABASE_SCHEMA.dependencies]]
+description = "External library references"
+columns = [
+    { name = "id", type = "INTEGER", primary = true, autoincrement = true },
+    { name = "name", type = "TEXT", required = true },
+    { name = "version", type = "TEXT" },
+    { name = "url", type = "TEXT" },
+    { name = "type", type = "TEXT", default = "cdn" },
+    { name = "required", type = "INTEGER", default = 1 },
+]
+
+[[DATABASE_SCHEMA.controls]]
+description = "Input control mappings"
+columns = [
+    { name = "id", type = "INTEGER", primary = true, autoincrement = true },
+    { name = "input_type", type = "TEXT", required = true },
+    { name = "input_key", type = "TEXT", required = true },
+    { name = "action", type = "TEXT", required = true },
+    { name = "description", type = "TEXT" },
+]
+input_types = ["keyboard", "mouse", "touch", "gamepad"]
+
+[[DATABASE_SCHEMA.configuration]]
+description = "Game configuration settings"
+columns = [
+    { name = "id", type = "INTEGER", primary = true, autoincrement = true },
+    { name = "category", type = "TEXT", required = true },
+    { name = "key", type = "TEXT", required = true },
+    { name = "value", type = "TEXT" },
+    { name = "default_value", type = "TEXT" },
+    { name = "description", type = "TEXT" },
+]
+categories = ["graphics", "audio", "gameplay", "controls", "network"]
+
+[[DATABASE_SCHEMA.version_history]]
+description = "Release version tracking"
+columns = [
+    { name = "id", type = "INTEGER", primary = true, autoincrement = true },
+    { name = "version", type = "TEXT", required = true },
+    { name = "changelog", type = "TEXT" },
+    { name = "released_at", type = "TEXT" },
+]
+
+################################################################################
+# NAMING CONVENTIONS
+################################################################################
+
+[NAMING_CONVENTIONS]
+
+[NAMING_CONVENTIONS.directories]
+style = "kebab-case"
+pattern = "^[a-z0-9]+(-[a-z0-9]+)*$"
+examples = ["cube-spinner", "neural-network-viz", "block-breaker"]
+max_length = 32
+
+[NAMING_CONVENTIONS.files]
+style = "kebab-case"
+pattern = "^[a-z0-9]+(-[a-z0-9]+)*\\.[a-z]+$"
+reserved = ["index.html", "game.db", "README.md"]
+
+[NAMING_CONVENTIONS.database_tables]
+style = "snake_case"
+pattern = "^[a-z]+(_[a-z]+)*$"
+examples = ["source_files", "version_history"]
+
+[NAMING_CONVENTIONS.database_columns]
+style = "snake_case"
+pattern = "^[a-z]+(_[a-z]+)*$"
+
+################################################################################
+# QUERY FUNCTION TEMPLATES
+################################################################################
+
+[QUERY_TEMPLATES]
+
+[[QUERY_TEMPLATES.python]]
+language = "python"
+description = "Python SQLite query functions"
+template = """
+import sqlite3
+
+def query_game_db(db_path, query, params=()):
+    '''Execute a query on a game database.'''
+    conn = sqlite3.connect(db_path)
+    cursor = conn.cursor()
+    cursor.execute(query, params)
+    results = cursor.fetchall()
+    conn.close()
+    return results
+
+# Common queries
+QUERIES = {
+    'get_metadata': 'SELECT key, value FROM metadata',
+    'get_source': 'SELECT content FROM source_files WHERE filename = ?',
+    'get_controls': 'SELECT input_key, action FROM controls',
+    'get_deps': 'SELECT name, version, url FROM dependencies',
+    'get_config': 'SELECT category, key, value FROM configuration',
+}
+"""
+
+[[QUERY_TEMPLATES.javascript]]
+language = "javascript"
+description = "JavaScript/Node.js query functions"
+template = """
+const sqlite3 = require('sqlite3').verbose();
+
+async function queryGameDB(dbPath, query, params = []) {
+    return new Promise((resolve, reject) => {
+        const db = new sqlite3.Database(dbPath);
+        db.all(query, params, (err, rows) => {
+            db.close();
+            if (err) reject(err);
+            else resolve(rows);
+        });
+    });
+}
+"""
+
+[[QUERY_TEMPLATES.sql]]
+language = "sql"
+description = "Common SQL query examples"
+examples = [
+    "SELECT * FROM metadata WHERE key = 'name';",
+    "SELECT filename, size_bytes FROM source_files ORDER BY size_bytes DESC;",
+    "SELECT input_key, action FROM controls WHERE input_type LIKE '%keyboard%';",
+    "SELECT category, key, value FROM configuration WHERE category = 'graphics';",
+]
+
+################################################################################
+# VALIDATION RULES
+################################################################################
+
+[VALIDATION]
+
+[VALIDATION.game_module]
+required = [
+    { path = "index.html", min_size = 100 },
+    { path = "game.db", min_size = 4096 },
+    { path = "README.md", min_size = 100 },
+]
+
+[VALIDATION.database]
+required_tables = ["metadata", "source_files", "dependencies", "controls", "configuration"]
+required_metadata_keys = ["id", "name", "category"]
+
+[VALIDATION.html]
+must_contain = ["<!DOCTYPE html>", "<html>", "</html>"]
+should_contain = ["<script", "three.js"]
+
+################################################################################
+# BUILD PROCESS
+################################################################################
+
+[BUILD]
+script = "build_databases.py"
+steps = [
+    "Parse legacy .md files",
+    "Extract HTML/CSS/JS content",
+    "Create SQLite databases",
+    "Generate README.md files",
+    "Create standalone index.html",
+]
+
+[BUILD.dependencies]
+python = ">=3.6"
+modules = ["sqlite3", "os", "re", "json", "datetime"]
+
+################################################################################
+# DEPLOYMENT
+################################################################################
+
+[DEPLOYMENT]
+platform = "GitHub Pages"
+base_url = "https://teslasolar.github.io/games"
+repository = "https://github.com/teslasolar/games"
+
+[DEPLOYMENT.paths]
+root = "/"
+game_pattern = "/{game-id}/"
+example = "/cube-spinner/"
+
+################################################################################
+# EXTENSION POINTS
+################################################################################
+
+[EXTENSIONS]
+
+[EXTENSIONS.future]
+planned = [
+    "Multiplayer support (WebRTC)",
+    "Cloud save integration",
+    "Achievement system",
+    "Leaderboards",
+    "Mobile touch controls",
+    "VR/AR support (WebXR)",
+]
+
+[EXTENSIONS.tables]
+reserved = [
+    "leaderboards",
+    "achievements",
+    "save_states",
+    "multiplayer_sessions",
+    "user_profiles",
+]
+
+################################################################################
+# END OF UDT DEFINITION
+################################################################################
