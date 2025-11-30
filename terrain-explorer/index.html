@@ -1,46 +1,431 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Terrain Explorer</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="description" content="Explore procedurally generated 3D terrain in a neon cyberpunk world. Navigate vast landscapes with flying camera controls in this immersive WebGL experience.">
+    <meta name="keywords" content="3D terrain, procedural generation, WebGL, Three.js, cyberpunk, game">
+    <meta property="og:title" content="Terrain Explorer - Neon Cyberpunk Edition">
+    <meta property="og:description" content="Explore procedurally generated 3D terrain in a neon cyberpunk world with flying camera controls.">
+    <meta property="og:type" content="website">
+    <meta property="og:image" content="https://via.placeholder.com/1200x630/000000/00ff88?text=Terrain+Explorer">
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="Terrain Explorer - Neon Cyberpunk Edition">
+    <meta name="twitter:description" content="Explore procedurally generated 3D terrain in a neon cyberpunk world.">
+    <title>Terrain Explorer - Neon Cyberpunk Edition</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     <style>
-        body { margin: 0; overflow: hidden; background: #87CEEB; }
+        * { box-sizing: border-box; }
+        body {
+            margin: 0;
+            overflow: hidden;
+            background: #000;
+            font-family: 'Courier New', monospace;
+            touch-action: none;
+        }
         canvas { display: block; }
+
+        /* Loading Screen */
+        #loading {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(135deg, #000000 0%, #1a0033 100%);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 10000;
+            transition: opacity 0.5s;
+        }
+        #loading.hidden {
+            opacity: 0;
+            pointer-events: none;
+        }
+        .spinner {
+            width: 60px;
+            height: 60px;
+            border: 4px solid rgba(0, 255, 136, 0.2);
+            border-top: 4px solid #00ff88;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        #loading h1 {
+            color: #00ff88;
+            margin-top: 20px;
+            font-size: 24px;
+            text-shadow: 0 0 10px #00ff88;
+        }
+        #loading p {
+            color: #00ff88;
+            margin-top: 10px;
+            opacity: 0.7;
+        }
+
+        /* Info Panel */
         #info {
             position: absolute;
             top: 20px;
             left: 20px;
-            color: #fff;
+            color: #00ff88;
             font-family: 'Courier New', monospace;
             font-size: 12px;
-            background: rgba(0, 0, 0, 0.7);
+            background: rgba(0, 0, 0, 0.85);
             padding: 15px;
             border-radius: 8px;
+            border: 2px solid #00ff88;
+            box-shadow: 0 0 20px rgba(0, 255, 136, 0.3);
+            max-width: 250px;
         }
+        #info strong {
+            color: #00ff88;
+            text-shadow: 0 0 5px #00ff88;
+        }
+
+        /* FPS Counter */
+        #fps {
+            position: absolute;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            color: #00ff88;
+            font-family: 'Courier New', monospace;
+            font-size: 14px;
+            background: rgba(0, 0, 0, 0.85);
+            padding: 10px 20px;
+            border-radius: 8px;
+            border: 2px solid #00ff88;
+            box-shadow: 0 0 20px rgba(0, 255, 136, 0.3);
+            display: none;
+        }
+        #fps.visible {
+            display: block;
+        }
+
+        /* Minimap */
         #minimap {
             position: absolute;
             top: 20px;
             right: 20px;
             width: 150px;
             height: 150px;
-            background: rgba(0, 0, 0, 0.7);
-            border: 2px solid #fff;
+            background: rgba(0, 0, 0, 0.85);
+            border: 2px solid #00ff88;
             border-radius: 8px;
+            box-shadow: 0 0 20px rgba(0, 255, 136, 0.3);
+        }
+
+        /* Settings Panel */
+        #settings {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(0, 0, 0, 0.95);
+            border: 3px solid #00ff88;
+            border-radius: 12px;
+            padding: 30px;
+            color: #00ff88;
+            min-width: 400px;
+            box-shadow: 0 0 40px rgba(0, 255, 136, 0.5);
+            display: none;
+            z-index: 1000;
+        }
+        #settings.visible {
+            display: block;
+        }
+        #settings h2 {
+            margin-top: 0;
+            text-align: center;
+            text-shadow: 0 0 10px #00ff88;
+            border-bottom: 2px solid #00ff88;
+            padding-bottom: 10px;
+        }
+        .setting-row {
+            margin: 20px 0;
+        }
+        .setting-row label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: bold;
+        }
+        .setting-row input[type="range"] {
+            width: 100%;
+            height: 6px;
+            background: rgba(0, 255, 136, 0.2);
+            border-radius: 3px;
+            outline: none;
+        }
+        .setting-row input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 18px;
+            height: 18px;
+            background: #00ff88;
+            border-radius: 50%;
+            cursor: pointer;
+            box-shadow: 0 0 10px #00ff88;
+        }
+        .setting-row input[type="range"]::-moz-range-thumb {
+            width: 18px;
+            height: 18px;
+            background: #00ff88;
+            border-radius: 50%;
+            cursor: pointer;
+            box-shadow: 0 0 10px #00ff88;
+        }
+        .setting-row .value-display {
+            display: inline-block;
+            margin-left: 10px;
+            color: #00ff88;
+            font-weight: bold;
+        }
+        .quality-buttons {
+            display: flex;
+            gap: 10px;
+        }
+        .quality-buttons button {
+            flex: 1;
+            padding: 10px;
+            background: rgba(0, 255, 136, 0.2);
+            border: 2px solid #00ff88;
+            color: #00ff88;
+            cursor: pointer;
+            border-radius: 5px;
+            font-family: 'Courier New', monospace;
+            transition: all 0.3s;
+        }
+        .quality-buttons button:hover {
+            background: rgba(0, 255, 136, 0.4);
+            box-shadow: 0 0 15px rgba(0, 255, 136, 0.5);
+        }
+        .quality-buttons button.active {
+            background: #00ff88;
+            color: #000;
+            box-shadow: 0 0 20px rgba(0, 255, 136, 0.8);
+        }
+
+        /* Help Overlay */
+        #help {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(0, 0, 0, 0.95);
+            border: 3px solid #00ff88;
+            border-radius: 12px;
+            padding: 30px;
+            color: #00ff88;
+            min-width: 500px;
+            box-shadow: 0 0 40px rgba(0, 255, 136, 0.5);
+            display: none;
+            z-index: 1001;
+        }
+        #help.visible {
+            display: block;
+        }
+        #help h2 {
+            margin-top: 0;
+            text-align: center;
+            text-shadow: 0 0 10px #00ff88;
+            border-bottom: 2px solid #00ff88;
+            padding-bottom: 10px;
+        }
+        .help-section {
+            margin: 20px 0;
+        }
+        .help-section h3 {
+            color: #00ff88;
+            margin-bottom: 10px;
+            text-shadow: 0 0 5px #00ff88;
+        }
+        .help-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 5px 0;
+            border-bottom: 1px solid rgba(0, 255, 136, 0.2);
+        }
+        .help-key {
+            font-weight: bold;
+            color: #00ff88;
+        }
+        .help-desc {
+            opacity: 0.8;
+        }
+
+        /* Pause Overlay */
+        #pause {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 48px;
+            color: #00ff88;
+            text-shadow: 0 0 20px #00ff88;
+            font-weight: bold;
+            display: none;
+            z-index: 999;
+            background: rgba(0, 0, 0, 0.8);
+            padding: 40px 80px;
+            border: 3px solid #00ff88;
+            border-radius: 12px;
+        }
+        #pause.visible {
+            display: block;
+        }
+
+        /* Mobile Controls */
+        #mobile-controls {
+            position: absolute;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: none;
+            gap: 15px;
+        }
+        @media (max-width: 768px) {
+            #mobile-controls {
+                display: flex;
+            }
+        }
+        .mobile-joystick {
+            width: 120px;
+            height: 120px;
+            background: rgba(0, 255, 136, 0.2);
+            border: 3px solid #00ff88;
+            border-radius: 50%;
+            position: relative;
+            box-shadow: 0 0 20px rgba(0, 255, 136, 0.3);
+        }
+        .mobile-button {
+            width: 60px;
+            height: 60px;
+            background: rgba(0, 255, 136, 0.2);
+            border: 3px solid #00ff88;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #00ff88;
+            font-size: 24px;
+            box-shadow: 0 0 20px rgba(0, 255, 136, 0.3);
+            user-select: none;
         }
     </style>
 </head>
 <body>
+    <!-- Loading Screen -->
+    <div id="loading">
+        <div class="spinner"></div>
+        <h1>TERRAIN EXPLORER</h1>
+        <p>Initializing cyberpunk world...</p>
+    </div>
+
+    <!-- Info Panel -->
     <div id="info">
-        🏔️ <strong>TERRAIN EXPLORER</strong><br><br>
-        <strong>Controls:</strong><br>
+        <strong>TERRAIN EXPLORER</strong><br><br>
+        <strong>Quick Controls:</strong><br>
         WASD: Move<br>
         Mouse: Look around<br>
-        Shift: Speed boost<br>
-        Space: Jump<br>
-        R: Regenerate terrain
+        H: Help<br>
+        ESC: Settings<br>
+        P: Pause
     </div>
+
+    <!-- FPS Counter -->
+    <div id="fps">FPS: 60</div>
+
+    <!-- Minimap -->
     <canvas id="minimap"></canvas>
+
+    <!-- Pause Overlay -->
+    <div id="pause">PAUSED</div>
+
+    <!-- Settings Panel -->
+    <div id="settings">
+        <h2>SETTINGS</h2>
+        <div class="setting-row">
+            <label>Graphics Quality:</label>
+            <div class="quality-buttons">
+                <button onclick="setQuality('low')">LOW</button>
+                <button onclick="setQuality('medium')" class="active">MEDIUM</button>
+                <button onclick="setQuality('high')">HIGH</button>
+            </div>
+        </div>
+        <div class="setting-row">
+            <label>Draw Distance: <span class="value-display" id="drawDistanceValue">200</span></label>
+            <input type="range" id="drawDistance" min="100" max="500" value="200" oninput="updateDrawDistance(this.value)">
+        </div>
+        <div class="setting-row">
+            <label>Fog Density: <span class="value-display" id="fogDensityValue">150</span></label>
+            <input type="range" id="fogDensity" min="50" max="300" value="150" oninput="updateFogDensity(this.value)">
+        </div>
+        <div class="setting-row" style="text-align: center; margin-top: 30px;">
+            <button onclick="toggleSettings()" style="padding: 12px 40px; background: #00ff88; color: #000; border: none; border-radius: 5px; cursor: pointer; font-family: 'Courier New', monospace; font-weight: bold;">CLOSE</button>
+        </div>
+    </div>
+
+    <!-- Help Overlay -->
+    <div id="help">
+        <h2>KEYBOARD SHORTCUTS</h2>
+        <div class="help-section">
+            <h3>Movement</h3>
+            <div class="help-row">
+                <span class="help-key">W / A / S / D</span>
+                <span class="help-desc">Move forward / left / back / right</span>
+            </div>
+            <div class="help-row">
+                <span class="help-key">SHIFT</span>
+                <span class="help-desc">Speed boost</span>
+            </div>
+            <div class="help-row">
+                <span class="help-key">SPACE</span>
+                <span class="help-desc">Jump</span>
+            </div>
+            <div class="help-row">
+                <span class="help-key">MOUSE</span>
+                <span class="help-desc">Look around</span>
+            </div>
+        </div>
+        <div class="help-section">
+            <h3>Controls</h3>
+            <div class="help-row">
+                <span class="help-key">P</span>
+                <span class="help-desc">Pause/Resume game</span>
+            </div>
+            <div class="help-row">
+                <span class="help-key">ESC</span>
+                <span class="help-desc">Toggle settings panel</span>
+            </div>
+            <div class="help-row">
+                <span class="help-key">F</span>
+                <span class="help-desc">Toggle FPS counter</span>
+            </div>
+            <div class="help-row">
+                <span class="help-key">H</span>
+                <span class="help-desc">Toggle this help overlay</span>
+            </div>
+            <div class="help-row">
+                <span class="help-key">R</span>
+                <span class="help-desc">Regenerate terrain</span>
+            </div>
+        </div>
+        <div class="help-section" style="text-align: center; margin-top: 30px;">
+            <button onclick="toggleHelp()" style="padding: 12px 40px; background: #00ff88; color: #000; border: none; border-radius: 5px; cursor: pointer; font-family: 'Courier New', monospace; font-weight: bold;">CLOSE</button>
+        </div>
+    </div>
+
+    <!-- Mobile Controls -->
+    <div id="mobile-controls">
+        <div class="mobile-joystick" id="joystick"></div>
+        <div class="mobile-button" id="jumpBtn">↑</div>
+        <div class="mobile-button" id="boostBtn">⚡</div>
+    </div>
 
     <script>
         let scene, camera, renderer;
@@ -49,23 +434,38 @@
         let keys = {};
         let mouseX = 0, mouseY = 0;
         let isPointerLocked = false;
+        let isPaused = false;
+        let showFPS = false;
+        let lastFrameTime = performance.now();
+        let frameCount = 0;
+        let fps = 60;
+
+        // Settings
+        let drawDistance = 200;
+        let fogDensity = 150;
+        let graphicsQuality = 'medium';
 
         // Terrain settings
         const terrainSize = 100;
-        const terrainSegments = 50;
+        let terrainSegments = 50;
         const heightScale = 10;
+
+        // Mobile touch controls
+        let mobileJoystick = { x: 0, y: 0 };
+        let mobileBoost = false;
+        let mobileJump = false;
 
         function init() {
             scene = new THREE.Scene();
-            scene.background = new THREE.Color(0x87CEEB);
-            scene.fog = new THREE.Fog(0x87CEEB, 50, 150);
+            scene.background = new THREE.Color(0x000a14); // Dark cyberpunk background
+            scene.fog = new THREE.Fog(0x000a14, 50, fogDensity);
 
-            camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 500);
+            camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, drawDistance);
             camera.position.set(0, 20, 0);
 
-            renderer = new THREE.WebGLRenderer({ antialias: true });
+            renderer = new THREE.WebGLRenderer({ antialias: graphicsQuality !== 'low' });
             renderer.setSize(window.innerWidth, window.innerHeight);
-            renderer.shadowMap.enabled = true;
+            renderer.shadowMap.enabled = graphicsQuality === 'high';
             document.body.appendChild(renderer.domElement);
 
             createTerrain();
@@ -73,9 +473,89 @@
             createSky();
             createLighting();
             setupEventListeners();
+            setupMobileControls();
             updateMinimap();
 
+            // Hide loading screen
+            setTimeout(() => {
+                document.getElementById('loading').classList.add('hidden');
+            }, 1000);
+
             animate();
+        }
+
+        // UI Toggle Functions
+        function togglePause() {
+            isPaused = !isPaused;
+            document.getElementById('pause').classList.toggle('visible', isPaused);
+        }
+
+        function toggleFPS() {
+            showFPS = !showFPS;
+            document.getElementById('fps').classList.toggle('visible', showFPS);
+        }
+
+        function toggleSettings() {
+            const settingsPanel = document.getElementById('settings');
+            const isVisible = settingsPanel.classList.contains('visible');
+            settingsPanel.classList.toggle('visible');
+            if (!isVisible) {
+                document.exitPointerLock();
+            }
+        }
+
+        function toggleHelp() {
+            const helpPanel = document.getElementById('help');
+            const isVisible = helpPanel.classList.contains('visible');
+            helpPanel.classList.toggle('visible');
+            if (!isVisible) {
+                document.exitPointerLock();
+            }
+        }
+
+        // Settings Functions
+        function updateDrawDistance(value) {
+            drawDistance = parseInt(value);
+            document.getElementById('drawDistanceValue').textContent = value;
+            camera.far = drawDistance;
+            camera.updateProjectionMatrix();
+        }
+
+        function updateFogDensity(value) {
+            fogDensity = parseInt(value);
+            document.getElementById('fogDensityValue').textContent = value;
+            scene.fog.far = fogDensity;
+        }
+
+        function setQuality(quality) {
+            graphicsQuality = quality;
+
+            // Update button states
+            const buttons = document.querySelectorAll('.quality-buttons button');
+            buttons.forEach(btn => btn.classList.remove('active'));
+            event.target.classList.add('active');
+
+            // Apply quality settings
+            switch(quality) {
+                case 'low':
+                    terrainSegments = 30;
+                    renderer.setPixelRatio(1);
+                    renderer.shadowMap.enabled = false;
+                    break;
+                case 'medium':
+                    terrainSegments = 50;
+                    renderer.setPixelRatio(window.devicePixelRatio);
+                    renderer.shadowMap.enabled = false;
+                    break;
+                case 'high':
+                    terrainSegments = 70;
+                    renderer.setPixelRatio(window.devicePixelRatio);
+                    renderer.shadowMap.enabled = true;
+                    break;
+            }
+
+            // Recreate terrain with new settings
+            createTerrain();
         }
 
         function noise(x, y) {
@@ -160,20 +640,20 @@
 
             geometry.computeVertexNormals();
 
-            // Create vertex colors based on height
+            // Create cyberpunk vertex colors based on height
             const colors = [];
             for (let i = 0; i < vertices.length; i += 3) {
                 const height = vertices[i + 2];
                 let color;
 
                 if (height < 2) {
-                    color = new THREE.Color(0xC2B280); // Beach
+                    color = new THREE.Color(0x003322); // Dark teal valleys
                 } else if (height < 5) {
-                    color = new THREE.Color(0x228B22); // Grass
+                    color = new THREE.Color(0x00ff88); // Neon green terrain
                 } else if (height < 8) {
-                    color = new THREE.Color(0x8B7355); // Rock
+                    color = new THREE.Color(0x00aa66); // Medium neon green peaks
                 } else {
-                    color = new THREE.Color(0xFFFFFF); // Snow
+                    color = new THREE.Color(0x00ffdd); // Cyan highlights
                 }
 
                 colors.push(color.r, color.g, color.b);
@@ -184,7 +664,9 @@
             const material = new THREE.MeshPhongMaterial({
                 vertexColors: true,
                 flatShading: true,
-                shininess: 0
+                shininess: 30,
+                emissive: 0x00ff88,
+                emissiveIntensity: 0.2
             });
 
             terrain = new THREE.Mesh(geometry, material);
@@ -196,10 +678,12 @@
         function createWater() {
             const geometry = new THREE.PlaneGeometry(terrainSize * 2, terrainSize * 2);
             const material = new THREE.MeshPhongMaterial({
-                color: 0x4A90E2,
+                color: 0x00ffdd,
                 transparent: true,
-                opacity: 0.6,
-                shininess: 100
+                opacity: 0.4,
+                shininess: 100,
+                emissive: 0x00ffdd,
+                emissiveIntensity: 0.3
             });
 
             water = new THREE.Mesh(geometry, material);
@@ -209,43 +693,56 @@
         }
 
         function createSky() {
-            // Sun
-            const sunGeometry = new THREE.SphereGeometry(5, 32, 32);
-            const sunMaterial = new THREE.MeshBasicMaterial({ color: 0xFFFF00 });
-            const sun = new THREE.Mesh(sunGeometry, sunMaterial);
-            sun.position.set(50, 80, -100);
-            scene.add(sun);
+            // Neon moon/orb
+            const moonGeometry = new THREE.SphereGeometry(5, 32, 32);
+            const moonMaterial = new THREE.MeshBasicMaterial({
+                color: 0xff00ff,
+                emissive: 0xff00ff,
+                emissiveIntensity: 1
+            });
+            const moon = new THREE.Mesh(moonGeometry, moonMaterial);
+            moon.position.set(50, 80, -100);
 
-            // Clouds
-            for (let i = 0; i < 20; i++) {
-                const cloudGeometry = new THREE.SphereGeometry(5, 8, 8);
-                const cloudMaterial = new THREE.MeshBasicMaterial({
-                    color: 0xFFFFFF,
+            // Add glow effect
+            const glowGeometry = new THREE.SphereGeometry(7, 32, 32);
+            const glowMaterial = new THREE.MeshBasicMaterial({
+                color: 0xff00ff,
+                transparent: true,
+                opacity: 0.3
+            });
+            const glow = new THREE.Mesh(glowGeometry, glowMaterial);
+            moon.add(glow);
+
+            scene.add(moon);
+
+            // Floating neon particles/orbs
+            for (let i = 0; i < 15; i++) {
+                const orbGeometry = new THREE.SphereGeometry(2, 16, 16);
+                const orbColor = Math.random() > 0.5 ? 0x00ff88 : 0xff00ff;
+                const orbMaterial = new THREE.MeshBasicMaterial({
+                    color: orbColor,
                     transparent: true,
-                    opacity: 0.7
+                    opacity: 0.6,
+                    emissive: orbColor,
+                    emissiveIntensity: 0.8
                 });
-                const cloud = new THREE.Mesh(cloudGeometry, cloudMaterial);
+                const orb = new THREE.Mesh(orbGeometry, orbMaterial);
 
-                cloud.position.set(
+                orb.position.set(
                     (Math.random() - 0.5) * 200,
-                    50 + Math.random() * 30,
+                    30 + Math.random() * 40,
                     (Math.random() - 0.5) * 200
                 );
-                cloud.scale.set(
-                    1 + Math.random() * 2,
-                    0.5 + Math.random() * 0.5,
-                    1 + Math.random() * 2
-                );
 
-                scene.add(cloud);
+                scene.add(orb);
             }
         }
 
         function createLighting() {
-            const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
+            const ambientLight = new THREE.AmbientLight(0x00ff88, 0.4);
             scene.add(ambientLight);
 
-            const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8);
+            const directionalLight = new THREE.DirectionalLight(0xff00ff, 0.6);
             directionalLight.position.set(50, 80, -100);
             directionalLight.castShadow = true;
             directionalLight.shadow.camera.left = -50;
@@ -253,12 +750,27 @@
             directionalLight.shadow.camera.top = 50;
             directionalLight.shadow.camera.bottom = -50;
             scene.add(directionalLight);
+
+            // Add accent lighting
+            const accentLight = new THREE.PointLight(0x00ff88, 1, 100);
+            accentLight.position.set(0, 30, 0);
+            scene.add(accentLight);
         }
 
         function setupEventListeners() {
             document.addEventListener('keydown', (e) => {
-                keys[e.key.toLowerCase()] = true;
-                if (e.key.toLowerCase() === 'r') createTerrain();
+                const key = e.key.toLowerCase();
+                keys[key] = true;
+
+                // Handle special keys
+                if (key === 'r') createTerrain();
+                if (key === 'p') togglePause();
+                if (key === 'f') toggleFPS();
+                if (key === 'h') toggleHelp();
+                if (key === 'escape') {
+                    toggleSettings();
+                    e.preventDefault();
+                }
             });
 
             document.addEventListener('keyup', (e) => {
@@ -266,7 +778,10 @@
             });
 
             document.addEventListener('click', () => {
-                renderer.domElement.requestPointerLock();
+                if (!document.getElementById('settings').classList.contains('visible') &&
+                    !document.getElementById('help').classList.contains('visible')) {
+                    renderer.domElement.requestPointerLock();
+                }
             });
 
             document.addEventListener('pointerlockchange', () => {
@@ -284,8 +799,74 @@
             window.addEventListener('resize', onResize);
         }
 
+        function setupMobileControls() {
+            // Jump button
+            const jumpBtn = document.getElementById('jumpBtn');
+            jumpBtn.addEventListener('touchstart', (e) => {
+                e.preventDefault();
+                mobileJump = true;
+            });
+            jumpBtn.addEventListener('touchend', (e) => {
+                e.preventDefault();
+                mobileJump = false;
+            });
+
+            // Boost button
+            const boostBtn = document.getElementById('boostBtn');
+            boostBtn.addEventListener('touchstart', (e) => {
+                e.preventDefault();
+                mobileBoost = true;
+            });
+            boostBtn.addEventListener('touchend', (e) => {
+                e.preventDefault();
+                mobileBoost = false;
+            });
+
+            // Joystick
+            const joystick = document.getElementById('joystick');
+            let joystickActive = false;
+            let joystickStartX = 0;
+            let joystickStartY = 0;
+
+            joystick.addEventListener('touchstart', (e) => {
+                e.preventDefault();
+                joystickActive = true;
+                const touch = e.touches[0];
+                const rect = joystick.getBoundingClientRect();
+                joystickStartX = rect.left + rect.width / 2;
+                joystickStartY = rect.top + rect.height / 2;
+            });
+
+            joystick.addEventListener('touchmove', (e) => {
+                if (!joystickActive) return;
+                e.preventDefault();
+                const touch = e.touches[0];
+                const deltaX = touch.clientX - joystickStartX;
+                const deltaY = touch.clientY - joystickStartY;
+                const distance = Math.sqrt(deltaX * deltaX + deltaY * deltaY);
+                const maxDistance = 50;
+
+                if (distance > maxDistance) {
+                    mobileJoystick.x = (deltaX / distance) * maxDistance / maxDistance;
+                    mobileJoystick.y = (deltaY / distance) * maxDistance / maxDistance;
+                } else {
+                    mobileJoystick.x = deltaX / maxDistance;
+                    mobileJoystick.y = deltaY / maxDistance;
+                }
+            });
+
+            joystick.addEventListener('touchend', (e) => {
+                e.preventDefault();
+                joystickActive = false;
+                mobileJoystick.x = 0;
+                mobileJoystick.y = 0;
+            });
+        }
+
         function updateMovement() {
-            const speed = keys['shift'] ? 0.5 : 0.2;
+            if (isPaused) return;
+
+            const speed = (keys['shift'] || mobileBoost) ? 0.5 : 0.2;
             const forward = new THREE.Vector3(0, 0, -1);
             const right = new THREE.Vector3(1, 0, 0);
 
@@ -297,11 +878,11 @@
             forward.normalize();
             right.normalize();
 
-            if (keys['w']) velocity.add(forward.multiplyScalar(speed));
-            if (keys['s']) velocity.add(forward.multiplyScalar(-speed));
-            if (keys['a']) velocity.add(right.multiplyScalar(-speed));
-            if (keys['d']) velocity.add(right.multiplyScalar(speed));
-            if (keys[' ']) velocity.y += 0.3;
+            if (keys['w'] || mobileJoystick.y < -0.1) velocity.add(forward.multiplyScalar(speed));
+            if (keys['s'] || mobileJoystick.y > 0.1) velocity.add(forward.multiplyScalar(-speed));
+            if (keys['a'] || mobileJoystick.x < -0.1) velocity.add(right.multiplyScalar(-speed));
+            if (keys['d'] || mobileJoystick.x > 0.1) velocity.add(right.multiplyScalar(speed));
+            if (keys[' '] || mobileJump) velocity.y += 0.3;
 
             // Apply gravity
             velocity.y -= 0.02;
@@ -330,21 +911,21 @@
             ctx.fillStyle = '#000';
             ctx.fillRect(0, 0, 150, 150);
 
-            // Draw terrain on minimap
-            ctx.fillStyle = '#228B22';
+            // Draw terrain on minimap with neon green
+            ctx.fillStyle = '#003322';
             ctx.fillRect(10, 10, 130, 130);
 
             // Draw player position
             const playerX = (camera.position.x / terrainSize + 0.5) * 130 + 10;
             const playerZ = (camera.position.z / terrainSize + 0.5) * 130 + 10;
 
-            ctx.fillStyle = '#ff0000';
+            ctx.fillStyle = '#00ff88';
             ctx.beginPath();
             ctx.arc(playerX, playerZ, 5, 0, Math.PI * 2);
             ctx.fill();
 
             // Draw direction
-            ctx.strokeStyle = '#ff0000';
+            ctx.strokeStyle = '#00ff88';
             ctx.lineWidth = 2;
             ctx.beginPath();
             ctx.moveTo(playerX, playerZ);
@@ -353,6 +934,19 @@
                 playerZ - Math.cos(mouseX) * 10
             );
             ctx.stroke();
+        }
+
+        function updateFPSCounter() {
+            frameCount++;
+            const currentTime = performance.now();
+            if (currentTime >= lastFrameTime + 1000) {
+                fps = Math.round((frameCount * 1000) / (currentTime - lastFrameTime));
+                frameCount = 0;
+                lastFrameTime = currentTime;
+                if (showFPS) {
+                    document.getElementById('fps').textContent = `FPS: ${fps}`;
+                }
+            }
         }
 
         function onResize() {
@@ -364,12 +958,15 @@
         function animate() {
             requestAnimationFrame(animate);
 
-            updateMovement();
-            updateMinimap();
+            if (!isPaused) {
+                updateMovement();
+                updateMinimap();
 
-            // Animate water
-            water.material.opacity = 0.6 + Math.sin(Date.now() * 0.001) * 0.1;
+                // Animate water
+                water.material.opacity = 0.4 + Math.sin(Date.now() * 0.001) * 0.1;
+            }
 
+            updateFPSCounter();
             renderer.render(scene, camera);
         }
 
