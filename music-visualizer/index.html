@@ -1,14 +1,86 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-    <title>Music Visualizer 3D</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="description" content="Immersive 3D music visualizer with multiple visualization modes, microphone input, and audio file support. Experience your music in stunning neon cyberpunk style.">
+    <meta name="keywords" content="music visualizer, 3D visualizer, audio reactive, WebGL, Three.js">
+    <meta name="author" content="3D Games Gallery">
+
+    <!-- Open Graph / Facebook -->
+    <meta property="og:type" content="website">
+    <meta property="og:title" content="Music Visualizer 3D - Interactive Audio Experience">
+    <meta property="og:description" content="Immersive 3D music visualizer with multiple visualization modes, microphone input, and audio file support.">
+    <meta property="og:image" content="https://via.placeholder.com/1200x630/000000/00ff88?text=Music+Visualizer+3D">
+
+    <!-- Twitter -->
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="Music Visualizer 3D - Interactive Audio Experience">
+    <meta name="twitter:description" content="Immersive 3D music visualizer with multiple visualization modes, microphone input, and audio file support.">
+    <meta name="twitter:image" content="https://via.placeholder.com/1200x630/000000/00ff88?text=Music+Visualizer+3D">
+
+    <title>Music Visualizer 3D - Interactive Audio Experience</title>
     <style>
+        * {
+            box-sizing: border-box;
+        }
+
         body {
             margin: 0;
             overflow: hidden;
             font-family: 'Courier New', monospace;
             background: #000;
+            touch-action: none;
         }
+
+        /* Loading Screen */
+        #loadingScreen {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: #000;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 9999;
+            transition: opacity 0.5s;
+        }
+
+        #loadingScreen.hidden {
+            opacity: 0;
+            pointer-events: none;
+        }
+
+        .spinner {
+            width: 60px;
+            height: 60px;
+            border: 4px solid rgba(0, 255, 136, 0.1);
+            border-top: 4px solid #00ff88;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .loading-text {
+            color: #00ff88;
+            margin-top: 20px;
+            font-size: 16px;
+            animation: pulse 1.5s ease-in-out infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+
+        /* Info Panel */
         #info {
             position: absolute;
             top: 10px;
@@ -20,7 +92,44 @@
             border-radius: 8px;
             font-size: 14px;
             z-index: 100;
+            max-width: 250px;
         }
+
+        /* FPS Counter */
+        #fpsCounter {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            color: #00ff88;
+            background: rgba(0, 0, 0, 0.9);
+            padding: 10px 15px;
+            border: 2px solid #00ff88;
+            border-radius: 8px;
+            font-size: 14px;
+            z-index: 100;
+            display: none;
+        }
+
+        #fpsCounter.visible {
+            display: block;
+        }
+
+        /* Status Indicators */
+        .status-indicator {
+            display: inline-block;
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            margin-right: 5px;
+            background: #666;
+        }
+
+        .status-indicator.active {
+            background: #00ff88;
+            box-shadow: 0 0 10px #00ff88;
+        }
+
+        /* Controls */
         #controls {
             position: absolute;
             bottom: 10px;
@@ -32,6 +141,7 @@
             justify-content: center;
             z-index: 100;
         }
+
         .control-btn {
             background: rgba(0, 255, 136, 0.2);
             border: 2px solid #00ff88;
@@ -42,23 +152,36 @@
             font-family: 'Courier New', monospace;
             font-size: 12px;
             transition: all 0.3s;
+            white-space: nowrap;
         }
+
         .control-btn:hover {
             background: rgba(0, 255, 136, 0.4);
             transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0, 255, 136, 0.3);
         }
+
         .control-btn.active {
             background: rgba(0, 255, 136, 0.6);
             border-width: 3px;
         }
+
+        .control-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
         #fileInput {
             display: none;
         }
+
         .hint {
             font-size: 10px;
             color: #88ff88;
             margin-top: 5px;
         }
+
+        /* Welcome Screen */
         #welcome {
             position: absolute;
             top: 50%;
@@ -67,19 +190,29 @@
             text-align: center;
             color: #00ff88;
             font-size: 18px;
-            background: rgba(0, 0, 0, 0.9);
+            background: rgba(0, 0, 0, 0.95);
             padding: 40px;
             border: 3px solid #00ff88;
             border-radius: 15px;
             z-index: 200;
+            max-width: 90%;
+            box-shadow: 0 0 30px rgba(0, 255, 136, 0.5);
         }
+
         #welcome.hidden {
             display: none;
         }
-        #loadBtn {
-            margin-top: 20px;
-            padding: 15px 40px;
-            font-size: 18px;
+
+        .welcome-title {
+            font-size: 32px;
+            margin-bottom: 20px;
+            text-shadow: 0 0 10px #00ff88;
+        }
+
+        .welcome-btn {
+            margin: 10px;
+            padding: 15px 30px;
+            font-size: 16px;
             background: rgba(0, 255, 136, 0.3);
             border: 3px solid #00ff88;
             color: #00ff88;
@@ -87,41 +220,442 @@
             cursor: pointer;
             font-family: 'Courier New', monospace;
             font-weight: bold;
+            transition: all 0.3s;
         }
-        #loadBtn:hover {
+
+        .welcome-btn:hover {
             background: rgba(0, 255, 136, 0.5);
+            transform: scale(1.05);
+        }
+
+        /* Settings Panel */
+        #settingsPanel {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(0, 0, 0, 0.95);
+            border: 3px solid #00ff88;
+            border-radius: 15px;
+            padding: 30px;
+            z-index: 300;
+            display: none;
+            max-width: 90%;
+            max-height: 90vh;
+            overflow-y: auto;
+            box-shadow: 0 0 30px rgba(0, 255, 136, 0.5);
+        }
+
+        #settingsPanel.visible {
+            display: block;
+        }
+
+        .settings-title {
+            color: #00ff88;
+            font-size: 24px;
+            margin-bottom: 20px;
+            text-align: center;
+            text-shadow: 0 0 10px #00ff88;
+        }
+
+        .settings-section {
+            margin: 20px 0;
+            padding: 15px;
+            border: 1px solid rgba(0, 255, 136, 0.3);
+            border-radius: 8px;
+        }
+
+        .settings-section h3 {
+            color: #00ff88;
+            margin: 0 0 15px 0;
+            font-size: 16px;
+        }
+
+        .setting-item {
+            margin: 15px 0;
+            color: #00ff88;
+        }
+
+        .setting-item label {
+            display: block;
+            margin-bottom: 8px;
+            font-size: 12px;
+        }
+
+        .setting-item input[type="range"] {
+            width: 100%;
+            accent-color: #00ff88;
+        }
+
+        .setting-item select {
+            width: 100%;
+            background: rgba(0, 255, 136, 0.1);
+            border: 2px solid #00ff88;
+            color: #00ff88;
+            padding: 8px;
+            border-radius: 5px;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+        }
+
+        .setting-value {
+            display: inline-block;
+            margin-left: 10px;
+            font-weight: bold;
+        }
+
+        .close-btn {
+            background: rgba(0, 255, 136, 0.3);
+            border: 2px solid #00ff88;
+            color: #00ff88;
+            padding: 10px 30px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-family: 'Courier New', monospace;
+            font-size: 14px;
+            margin-top: 20px;
+            width: 100%;
+        }
+
+        .close-btn:hover {
+            background: rgba(0, 255, 136, 0.5);
+        }
+
+        /* Help Overlay */
+        #helpOverlay {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(0, 0, 0, 0.95);
+            border: 3px solid #00ff88;
+            border-radius: 15px;
+            padding: 30px;
+            z-index: 300;
+            display: none;
+            max-width: 90%;
+            max-height: 90vh;
+            overflow-y: auto;
+            color: #00ff88;
+            box-shadow: 0 0 30px rgba(0, 255, 136, 0.5);
+        }
+
+        #helpOverlay.visible {
+            display: block;
+        }
+
+        .help-title {
+            font-size: 24px;
+            margin-bottom: 20px;
+            text-align: center;
+            text-shadow: 0 0 10px #00ff88;
+        }
+
+        .help-section {
+            margin: 20px 0;
+        }
+
+        .help-section h3 {
+            color: #00ff88;
+            font-size: 18px;
+            margin-bottom: 10px;
+            border-bottom: 2px solid rgba(0, 255, 136, 0.3);
+            padding-bottom: 5px;
+        }
+
+        .shortcut {
+            display: flex;
+            justify-content: space-between;
+            margin: 8px 0;
+            font-size: 13px;
+        }
+
+        .shortcut-key {
+            background: rgba(0, 255, 136, 0.2);
+            padding: 4px 12px;
+            border-radius: 5px;
+            border: 1px solid #00ff88;
+            font-weight: bold;
+        }
+
+        /* Pause Overlay */
+        #pauseOverlay {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            color: #00ff88;
+            font-size: 48px;
+            text-align: center;
+            z-index: 250;
+            display: none;
+            text-shadow: 0 0 20px #00ff88;
+            pointer-events: none;
+        }
+
+        #pauseOverlay.visible {
+            display: block;
+        }
+
+        /* Mobile Responsive */
+        @media (max-width: 768px) {
+            #info {
+                font-size: 12px;
+                padding: 10px;
+                max-width: 200px;
+            }
+
+            .control-btn {
+                padding: 10px 15px;
+                font-size: 11px;
+            }
+
+            #controls {
+                bottom: 5px;
+                gap: 5px;
+            }
+
+            .welcome-title {
+                font-size: 24px;
+            }
+
+            .welcome-btn {
+                padding: 12px 20px;
+                font-size: 14px;
+            }
+        }
+
+        /* Scrollbar Styling */
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: rgba(0, 255, 136, 0.1);
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: #00ff88;
+            border-radius: 4px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: #00cc70;
         }
     </style>
 </head>
 <body>
+    <!-- Loading Screen -->
+    <div id="loadingScreen">
+        <div class="spinner"></div>
+        <div class="loading-text">Loading Music Visualizer...</div>
+    </div>
+
+    <!-- Welcome Screen -->
     <div id="welcome">
-        <div style="font-size: 32px; margin-bottom: 20px;">🎵 MUSIC VISUALIZER</div>
-        <div style="margin: 15px 0;">Experience your music in 3D</div>
-        <button id="loadBtn">🎵 Load Music / Use Mic</button>
-        <div class="hint" style="margin-top: 15px;">Or click anywhere to start with generated tones</div>
+        <div class="welcome-title">MUSIC VISUALIZER 3D</div>
+        <div style="margin: 15px 0;">Experience your music in stunning 3D</div>
+        <div style="display: flex; flex-direction: column; gap: 10px; margin-top: 20px;">
+            <button class="welcome-btn" id="loadAudioBtn">Load Audio File</button>
+            <button class="welcome-btn" id="useMicBtn">Use Microphone</button>
+            <button class="welcome-btn" id="demoBtn">Demo with Generated Tones</button>
+        </div>
+        <div class="hint" style="margin-top: 20px;">Press H anytime for keyboard shortcuts</div>
     </div>
 
+    <!-- Info Panel -->
     <div id="info">
-        <div>🎵 MUSIC VISUALIZER</div>
-        <div class="hint">Mode: <span id="mode">Spectrum Bars</span></div>
-        <div class="hint">Click to toggle playback</div>
-        <div class="hint">1-6: Change visual mode</div>
+        <div style="font-size: 16px; margin-bottom: 10px;">MUSIC VISUALIZER</div>
+        <div class="hint">
+            <span class="status-indicator" id="audioStatus"></span>
+            Audio: <span id="audioSource">None</span>
+        </div>
+        <div class="hint">
+            Mode: <span id="mode">Spectrum Bars</span>
+        </div>
+        <div class="hint">
+            <span class="status-indicator" id="playStatus"></span>
+            Status: <span id="playStatusText">Stopped</span>
+        </div>
     </div>
 
+    <!-- FPS Counter -->
+    <div id="fpsCounter">
+        FPS: <span id="fpsValue">60</span>
+    </div>
+
+    <!-- Pause Overlay -->
+    <div id="pauseOverlay">
+        PAUSED
+        <div style="font-size: 20px; margin-top: 20px;">Press P to Resume</div>
+    </div>
+
+    <!-- Controls -->
     <div id="controls">
-        <button class="control-btn active" data-mode="0">📊 Spectrum Bars</button>
-        <button class="control-btn" data-mode="1">🌊 Waveform</button>
-        <button class="control-btn" data-mode="2">⭕ Circular</button>
-        <button class="control-btn" data-mode="3">🔮 Particles</button>
-        <button class="control-btn" data-mode="4">🌀 Tunnel</button>
-        <button class="control-btn" data-mode="5">💠 Crystals</button>
-        <label class="control-btn" for="fileInput">📁 Load Audio</label>
+        <button class="control-btn active" data-mode="0">Spectrum Bars</button>
+        <button class="control-btn" data-mode="1">Waveform</button>
+        <button class="control-btn" data-mode="2">Circular</button>
+        <button class="control-btn" data-mode="3">Particles</button>
+        <button class="control-btn" data-mode="4">Tunnel</button>
+        <button class="control-btn" data-mode="5">Crystals</button>
+        <label class="control-btn" for="fileInput">Load Audio</label>
+        <button class="control-btn" id="micToggle">Microphone</button>
+        <button class="control-btn" id="settingsBtn">Settings (ESC)</button>
+        <button class="control-btn" id="helpBtn">Help (H)</button>
     </div>
 
     <input type="file" id="fileInput" accept="audio/*">
 
+    <!-- Settings Panel -->
+    <div id="settingsPanel">
+        <div class="settings-title">SETTINGS</div>
+
+        <div class="settings-section">
+            <h3>Visualization Mode</h3>
+            <div class="setting-item">
+                <select id="modeSelect">
+                    <option value="0">Spectrum Bars</option>
+                    <option value="1">Waveform</option>
+                    <option value="2">Circular</option>
+                    <option value="3">Particles</option>
+                    <option value="4">Tunnel</option>
+                    <option value="5">Crystals</option>
+                </select>
+            </div>
+        </div>
+
+        <div class="settings-section">
+            <h3>Color Scheme</h3>
+            <div class="setting-item">
+                <select id="colorScheme">
+                    <option value="rainbow">Rainbow</option>
+                    <option value="neon">Neon Green</option>
+                    <option value="blue">Blue</option>
+                    <option value="red">Red</option>
+                    <option value="purple">Purple</option>
+                </select>
+            </div>
+        </div>
+
+        <div class="settings-section">
+            <h3>Audio Sensitivity</h3>
+            <div class="setting-item">
+                <label>
+                    Sensitivity: <span class="setting-value" id="sensitivityValue">1.0x</span>
+                </label>
+                <input type="range" id="sensitivity" min="0.5" max="3" step="0.1" value="1">
+            </div>
+        </div>
+
+        <div class="settings-section">
+            <h3>Graphics Quality</h3>
+            <div class="setting-item">
+                <select id="quality">
+                    <option value="high">High</option>
+                    <option value="medium">Medium</option>
+                    <option value="low">Low</option>
+                </select>
+            </div>
+        </div>
+
+        <div class="settings-section">
+            <h3>Camera</h3>
+            <div class="setting-item">
+                <label>
+                    Rotation Speed: <span class="setting-value" id="rotationValue">1.0x</span>
+                </label>
+                <input type="range" id="rotationSpeed" min="0" max="2" step="0.1" value="1">
+            </div>
+        </div>
+
+        <button class="close-btn" id="closeSettings">CLOSE</button>
+    </div>
+
+    <!-- Help Overlay -->
+    <div id="helpOverlay">
+        <div class="help-title">KEYBOARD SHORTCUTS</div>
+
+        <div class="help-section">
+            <h3>Playback Controls</h3>
+            <div class="shortcut">
+                <span>Pause/Resume</span>
+                <span class="shortcut-key">P</span>
+            </div>
+            <div class="shortcut">
+                <span>Toggle Playback (with audio loaded)</span>
+                <span class="shortcut-key">CLICK</span>
+            </div>
+        </div>
+
+        <div class="help-section">
+            <h3>Visualization Modes</h3>
+            <div class="shortcut">
+                <span>Spectrum Bars</span>
+                <span class="shortcut-key">1</span>
+            </div>
+            <div class="shortcut">
+                <span>Waveform</span>
+                <span class="shortcut-key">2</span>
+            </div>
+            <div class="shortcut">
+                <span>Circular</span>
+                <span class="shortcut-key">3</span>
+            </div>
+            <div class="shortcut">
+                <span>Particles</span>
+                <span class="shortcut-key">4</span>
+            </div>
+            <div class="shortcut">
+                <span>Tunnel</span>
+                <span class="shortcut-key">5</span>
+            </div>
+            <div class="shortcut">
+                <span>Crystals</span>
+                <span class="shortcut-key">6</span>
+            </div>
+        </div>
+
+        <div class="help-section">
+            <h3>Display Options</h3>
+            <div class="shortcut">
+                <span>Toggle FPS Counter</span>
+                <span class="shortcut-key">F</span>
+            </div>
+            <div class="shortcut">
+                <span>Open Settings</span>
+                <span class="shortcut-key">ESC</span>
+            </div>
+            <div class="shortcut">
+                <span>Toggle Help</span>
+                <span class="shortcut-key">H</span>
+            </div>
+        </div>
+
+        <div class="help-section">
+            <h3>Mobile Controls</h3>
+            <div class="shortcut">
+                <span>Tap screen to pause/resume</span>
+                <span class="shortcut-key">TAP</span>
+            </div>
+            <div class="shortcut">
+                <span>Use buttons for all controls</span>
+                <span class="shortcut-key">TOUCH</span>
+            </div>
+        </div>
+
+        <button class="close-btn" id="closeHelp">CLOSE</button>
+    </div>
+
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     <script>
+        // Configuration
+        const config = {
+            sensitivity: 1.0,
+            colorScheme: 'rainbow',
+            quality: 'high',
+            rotationSpeed: 1.0
+        };
+
         // Audio setup
         const audioContext = new (window.AudioContext || window.webkitAudioContext)();
         const analyser = audioContext.createAnalyser();
@@ -131,7 +665,18 @@
 
         let audioSource = null;
         let audio = null;
+        let mediaStream = null;
         let isPlaying = false;
+        let isPaused = false;
+        let currentAudioSource = 'None';
+        let oscillator = null;
+        let gainNode = null;
+
+        // FPS counter
+        let fps = 60;
+        let lastFrameTime = performance.now();
+        let frameCount = 0;
+        let fpsUpdateTime = performance.now();
 
         // Three.js setup
         const scene = new THREE.Scene();
@@ -144,9 +689,28 @@
         renderer.setSize(window.innerWidth, window.innerHeight);
         document.body.appendChild(renderer.domElement);
 
+        // Hide loading screen after Three.js loads
+        window.addEventListener('load', () => {
+            setTimeout(() => {
+                document.getElementById('loadingScreen').classList.add('hidden');
+            }, 500);
+        });
+
         // Visualization objects
         let visualMode = 0;
         const visualizers = [];
+
+        // Color scheme functions
+        function getColor(index, total, value) {
+            const schemes = {
+                rainbow: () => new THREE.Color().setHSL(index / total, 1, value * 0.5 + 0.25),
+                neon: () => new THREE.Color(0x00ff88).multiplyScalar(value * 0.7 + 0.3),
+                blue: () => new THREE.Color().setHSL(0.6, 1, value * 0.5 + 0.25),
+                red: () => new THREE.Color().setHSL(0, 1, value * 0.5 + 0.25),
+                purple: () => new THREE.Color().setHSL(0.8, 1, value * 0.5 + 0.25)
+            };
+            return schemes[config.colorScheme]();
+        }
 
         // Mode 0: Spectrum Bars
         class SpectrumBars {
@@ -154,8 +718,7 @@
                 this.bars = [];
                 for (let i = 0; i < bufferLength; i++) {
                     const geometry = new THREE.BoxGeometry(0.5, 1, 0.5);
-                    const hue = i / bufferLength;
-                    const material = new THREE.MeshBasicMaterial({ color: new THREE.Color().setHSL(hue, 1, 0.5) });
+                    const material = new THREE.MeshBasicMaterial({ color: 0x00ff88 });
                     const bar = new THREE.Mesh(geometry, material);
                     const angle = (i / bufferLength) * Math.PI * 2;
                     const radius = 15;
@@ -168,19 +731,14 @@
 
             update(dataArray) {
                 this.bars.forEach((bar, i) => {
-                    const value = dataArray[i] / 255;
+                    const value = (dataArray[i] / 255) * config.sensitivity;
                     bar.scale.y = value * 20 + 0.1;
-                    bar.material.color.setHSL(i / bufferLength, 1, value * 0.5 + 0.25);
+                    bar.material.color = getColor(i, bufferLength, value);
                 });
             }
 
-            hide() {
-                this.bars.forEach(bar => bar.visible = false);
-            }
-
-            show() {
-                this.bars.forEach(bar => bar.visible = true);
-            }
+            hide() { this.bars.forEach(bar => bar.visible = false); }
+            show() { this.bars.forEach(bar => bar.visible = true); }
         }
 
         // Mode 1: Waveform
@@ -197,7 +755,7 @@
             update(dataArray) {
                 const positions = this.line.geometry.attributes.position.array;
                 for (let i = 0; i < bufferLength; i++) {
-                    const value = (dataArray[i] / 255) * 10;
+                    const value = (dataArray[i] / 255) * 10 * config.sensitivity;
                     positions[i * 3] = (i / bufferLength) * 40 - 20;
                     positions[i * 3 + 1] = value - 5;
                     positions[i * 3 + 2] = Math.sin((i / bufferLength) * Math.PI * 4) * 2;
@@ -206,13 +764,8 @@
                 this.line.rotation.y += 0.01;
             }
 
-            hide() {
-                this.line.visible = false;
-            }
-
-            show() {
-                this.line.visible = true;
-            }
+            hide() { this.line.visible = false; }
+            show() { this.line.visible = true; }
         }
 
         // Mode 2: Circular
@@ -221,9 +774,8 @@
                 this.circles = [];
                 for (let i = 0; i < bufferLength; i++) {
                     const geometry = new THREE.RingGeometry(0.1, 0.3, 16);
-                    const hue = i / bufferLength;
                     const material = new THREE.MeshBasicMaterial({
-                        color: new THREE.Color().setHSL(hue, 1, 0.5),
+                        color: 0x00ff88,
                         side: THREE.DoubleSide
                     });
                     const circle = new THREE.Mesh(geometry, material);
@@ -238,20 +790,15 @@
 
             update(dataArray) {
                 this.circles.forEach((circle, i) => {
-                    const value = dataArray[i] / 255;
+                    const value = (dataArray[i] / 255) * config.sensitivity;
                     const scale = value * 5 + 0.5;
                     circle.scale.set(scale, scale, 1);
-                    circle.material.color.setHSL(i / bufferLength, 1, value * 0.5 + 0.25);
+                    circle.material.color = getColor(i, bufferLength, value);
                 });
             }
 
-            hide() {
-                this.circles.forEach(c => c.visible = false);
-            }
-
-            show() {
-                this.circles.forEach(c => c.visible = true);
-            }
+            hide() { this.circles.forEach(c => c.visible = false); }
+            show() { this.circles.forEach(c => c.visible = true); }
         }
 
         // Mode 3: Particles
@@ -266,7 +813,7 @@
                     positions[i * 3 + 1] = (Math.random() - 0.5) * 50;
                     positions[i * 3 + 2] = (Math.random() - 0.5) * 50;
 
-                    const color = new THREE.Color().setHSL(i / bufferLength, 1, 0.5);
+                    const color = new THREE.Color(0x00ff88);
                     colors[i * 3] = color.r;
                     colors[i * 3 + 1] = color.g;
                     colors[i * 3 + 2] = color.b;
@@ -286,37 +833,39 @@
 
             update(dataArray) {
                 const positions = this.particles.geometry.attributes.position.array;
+                const colors = this.particles.geometry.attributes.color.array;
                 for (let i = 0; i < bufferLength; i++) {
-                    const value = dataArray[i] / 255;
+                    const value = (dataArray[i] / 255) * config.sensitivity;
                     const scale = value * 20 + 5;
                     const angle = (i / bufferLength) * Math.PI * 2;
                     positions[i * 3] = Math.cos(angle) * scale;
                     positions[i * 3 + 1] = Math.sin(angle) * scale;
                     positions[i * 3 + 2] = value * 10 - 5;
+
+                    const color = getColor(i, bufferLength, value);
+                    colors[i * 3] = color.r;
+                    colors[i * 3 + 1] = color.g;
+                    colors[i * 3 + 2] = color.b;
                 }
                 this.particles.geometry.attributes.position.needsUpdate = true;
+                this.particles.geometry.attributes.color.needsUpdate = true;
                 this.particles.rotation.y += 0.005;
                 this.particles.rotation.x += 0.002;
             }
 
-            hide() {
-                this.particles.visible = false;
-            }
-
-            show() {
-                this.particles.visible = true;
-            }
+            hide() { this.particles.visible = false; }
+            show() { this.particles.visible = true; }
         }
 
         // Mode 4: Tunnel
         class Tunnel {
             constructor() {
                 this.rings = [];
-                for (let i = 0; i < 50; i++) {
+                const ringCount = config.quality === 'high' ? 50 : config.quality === 'medium' ? 30 : 20;
+                for (let i = 0; i < ringCount; i++) {
                     const geometry = new THREE.TorusGeometry(5, 0.3, 16, 100);
-                    const hue = i / 50;
                     const material = new THREE.MeshBasicMaterial({
-                        color: new THREE.Color().setHSL(hue, 1, 0.5),
+                        color: 0x00ff88,
                         wireframe: true
                     });
                     const ring = new THREE.Mesh(geometry, material);
@@ -327,27 +876,22 @@
             }
 
             update(dataArray) {
-                const avgValue = dataArray.reduce((a, b) => a + b) / bufferLength / 255;
+                const avgValue = (dataArray.reduce((a, b) => a + b) / bufferLength / 255) * config.sensitivity;
                 this.rings.forEach((ring, i) => {
                     ring.position.z += 0.5 + avgValue * 2;
                     if (ring.position.z > 10) {
                         ring.position.z = -100;
                     }
                     const idx = Math.floor((i / this.rings.length) * bufferLength);
-                    const value = dataArray[idx] / 255;
+                    const value = (dataArray[idx] / 255) * config.sensitivity;
                     ring.scale.set(1 + value, 1 + value, 1);
-                    ring.material.color.setHSL(i / this.rings.length, 1, value * 0.5 + 0.25);
+                    ring.material.color = getColor(i, this.rings.length, value);
                     ring.rotation.x += 0.01;
                 });
             }
 
-            hide() {
-                this.rings.forEach(r => r.visible = false);
-            }
-
-            show() {
-                this.rings.forEach(r => r.visible = true);
-            }
+            hide() { this.rings.forEach(r => r.visible = false); }
+            show() { this.rings.forEach(r => r.visible = true); }
         }
 
         // Mode 5: Crystals
@@ -356,9 +900,8 @@
                 this.crystals = [];
                 for (let i = 0; i < bufferLength; i++) {
                     const geometry = new THREE.OctahedronGeometry(0.5);
-                    const hue = i / bufferLength;
                     const material = new THREE.MeshBasicMaterial({
-                        color: new THREE.Color().setHSL(hue, 1, 0.5),
+                        color: 0x00ff88,
                         wireframe: true
                     });
                     const crystal = new THREE.Mesh(geometry, material);
@@ -374,21 +917,16 @@
 
             update(dataArray) {
                 this.crystals.forEach((crystal, i) => {
-                    const value = dataArray[i] / 255;
+                    const value = (dataArray[i] / 255) * config.sensitivity;
                     crystal.scale.setScalar(value * 3 + 0.5);
                     crystal.rotation.x += value * 0.1;
                     crystal.rotation.y += value * 0.1;
-                    crystal.material.color.setHSL(i / bufferLength, 1, value * 0.5 + 0.25);
+                    crystal.material.color = getColor(i, bufferLength, value);
                 });
             }
 
-            hide() {
-                this.crystals.forEach(c => c.visible = false);
-            }
-
-            show() {
-                this.crystals.forEach(c => c.visible = true);
-            }
+            hide() { this.crystals.forEach(c => c.visible = false); }
+            show() { this.crystals.forEach(c => c.visible = true); }
         }
 
         // Initialize visualizers
@@ -404,23 +942,9 @@
             visualizers[i].hide();
         }
 
-        // Load audio file
-        document.getElementById('fileInput').addEventListener('change', (e) => {
-            const file = e.target.files[0];
-            if (file) {
-                const url = URL.createObjectURL(file);
-                loadAudio(url);
-            }
-        });
-
-        document.getElementById('loadBtn').addEventListener('click', () => {
-            document.getElementById('fileInput').click();
-        });
-
-        function loadAudio(url) {
-            if (audio) {
-                audio.pause();
-            }
+        // Audio loading functions
+        function loadAudio(url, sourceName = 'Audio File') {
+            stopAllAudio();
 
             audio = new Audio(url);
             audioSource = audioContext.createMediaElementSource(audio);
@@ -429,13 +953,35 @@
 
             audio.play();
             isPlaying = true;
+            isPaused = false;
+            currentAudioSource = sourceName;
+            updateStatus();
             document.getElementById('welcome').classList.add('hidden');
         }
 
-        // Generate tone for demo
+        async function startMicrophone() {
+            try {
+                stopAllAudio();
+
+                mediaStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                audioSource = audioContext.createMediaStreamSource(mediaStream);
+                audioSource.connect(analyser);
+
+                isPlaying = true;
+                isPaused = false;
+                currentAudioSource = 'Microphone';
+                updateStatus();
+                document.getElementById('welcome').classList.add('hidden');
+            } catch (error) {
+                alert('Microphone access denied or not available: ' + error.message);
+            }
+        }
+
         function generateTone() {
-            const oscillator = audioContext.createOscillator();
-            const gainNode = audioContext.createGain();
+            stopAllAudio();
+
+            oscillator = audioContext.createOscillator();
+            gainNode = audioContext.createGain();
 
             oscillator.connect(gainNode);
             gainNode.connect(analyser);
@@ -449,28 +995,97 @@
 
             // Modulate frequency
             setInterval(() => {
-                oscillator.frequency.value = 200 + Math.random() * 600;
+                if (oscillator) {
+                    oscillator.frequency.value = 200 + Math.random() * 600;
+                }
             }, 500);
 
+            isPlaying = true;
+            isPaused = false;
+            currentAudioSource = 'Generated Tones';
+            updateStatus();
             document.getElementById('welcome').classList.add('hidden');
         }
 
-        // Click to start
-        renderer.domElement.addEventListener('click', () => {
-            if (!isPlaying && !audio) {
-                audioContext.resume();
-                generateTone();
-            } else if (audio) {
-                if (isPlaying) {
+        function stopAllAudio() {
+            if (audio) {
+                audio.pause();
+                audio = null;
+            }
+            if (mediaStream) {
+                mediaStream.getTracks().forEach(track => track.stop());
+                mediaStream = null;
+            }
+            if (oscillator) {
+                oscillator.stop();
+                oscillator = null;
+            }
+            if (gainNode) {
+                gainNode = null;
+            }
+            audioSource = null;
+        }
+
+        function togglePause() {
+            if (!isPlaying && !audio && !mediaStream && !oscillator) return;
+
+            isPaused = !isPaused;
+
+            if (audio) {
+                if (isPaused) {
                     audio.pause();
                 } else {
                     audio.play();
                 }
-                isPlaying = !isPlaying;
+            }
+
+            updateStatus();
+            document.getElementById('pauseOverlay').classList.toggle('visible', isPaused);
+        }
+
+        function updateStatus() {
+            document.getElementById('audioSource').textContent = currentAudioSource;
+            document.getElementById('audioStatus').classList.toggle('active', isPlaying);
+            document.getElementById('playStatus').classList.toggle('active', isPlaying && !isPaused);
+            document.getElementById('playStatusText').textContent = isPaused ? 'Paused' : (isPlaying ? 'Playing' : 'Stopped');
+        }
+
+        // Event listeners
+        document.getElementById('fileInput').addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if (file) {
+                const url = URL.createObjectURL(file);
+                loadAudio(url, file.name);
+            }
+        });
+
+        document.getElementById('loadAudioBtn').addEventListener('click', () => {
+            document.getElementById('fileInput').click();
+        });
+
+        document.getElementById('useMicBtn').addEventListener('click', startMicrophone);
+        document.getElementById('demoBtn').addEventListener('click', generateTone);
+
+        document.getElementById('micToggle').addEventListener('click', startMicrophone);
+
+        // Click to toggle playback
+        renderer.domElement.addEventListener('click', () => {
+            if (audio || mediaStream || oscillator) {
+                togglePause();
             }
         });
 
         // Mode switching
+        function switchMode(mode) {
+            visualizers[visualMode].hide();
+            visualMode = mode;
+            visualizers[visualMode].show();
+
+            const modeNames = ['Spectrum Bars', 'Waveform', 'Circular', 'Particles', 'Tunnel', 'Crystals'];
+            document.getElementById('mode').textContent = modeNames[mode];
+            document.getElementById('modeSelect').value = mode;
+        }
+
         document.querySelectorAll('.control-btn[data-mode]').forEach(btn => {
             btn.addEventListener('click', () => {
                 const mode = parseInt(btn.dataset.mode);
@@ -480,23 +1095,96 @@
             });
         });
 
-        function switchMode(mode) {
-            visualizers[visualMode].hide();
-            visualMode = mode;
-            visualizers[visualMode].show();
+        document.getElementById('modeSelect').addEventListener('change', (e) => {
+            const mode = parseInt(e.target.value);
+            switchMode(mode);
+            document.querySelectorAll('.control-btn[data-mode]').forEach((btn, idx) => {
+                btn.classList.toggle('active', idx === mode);
+            });
+        });
 
-            const modeNames = ['Spectrum Bars', 'Waveform', 'Circular', 'Particles', 'Tunnel', 'Crystals'];
-            document.getElementById('mode').textContent = modeNames[mode];
-        }
+        // Settings
+        document.getElementById('settingsBtn').addEventListener('click', () => {
+            document.getElementById('settingsPanel').classList.add('visible');
+        });
+
+        document.getElementById('closeSettings').addEventListener('click', () => {
+            document.getElementById('settingsPanel').classList.remove('visible');
+        });
+
+        document.getElementById('sensitivity').addEventListener('input', (e) => {
+            config.sensitivity = parseFloat(e.target.value);
+            document.getElementById('sensitivityValue').textContent = config.sensitivity.toFixed(1) + 'x';
+        });
+
+        document.getElementById('colorScheme').addEventListener('change', (e) => {
+            config.colorScheme = e.target.value;
+        });
+
+        document.getElementById('quality').addEventListener('change', (e) => {
+            config.quality = e.target.value;
+            // Reinitialize tunnel if it's the current mode
+            if (visualMode === 4) {
+                const oldTunnel = visualizers[4];
+                oldTunnel.rings.forEach(r => scene.remove(r));
+                visualizers[4] = new Tunnel();
+                visualizers[4].show();
+            }
+        });
+
+        document.getElementById('rotationSpeed').addEventListener('input', (e) => {
+            config.rotationSpeed = parseFloat(e.target.value);
+            document.getElementById('rotationValue').textContent = config.rotationSpeed.toFixed(1) + 'x';
+        });
+
+        // Help overlay
+        document.getElementById('helpBtn').addEventListener('click', () => {
+            document.getElementById('helpOverlay').classList.add('visible');
+        });
+
+        document.getElementById('closeHelp').addEventListener('click', () => {
+            document.getElementById('helpOverlay').classList.remove('visible');
+        });
+
+        // FPS counter toggle
+        document.getElementById('fpsCounter').addEventListener('click', () => {
+            document.getElementById('fpsCounter').classList.remove('visible');
+        });
 
         // Keyboard shortcuts
         document.addEventListener('keydown', (e) => {
+            // Number keys for mode switching
             const key = parseInt(e.key);
             if (key >= 1 && key <= 6) {
                 switchMode(key - 1);
                 document.querySelectorAll('.control-btn[data-mode]').forEach((btn, idx) => {
                     btn.classList.toggle('active', idx === key - 1);
                 });
+                return;
+            }
+
+            // Letter keys
+            switch(e.key.toLowerCase()) {
+                case 'p':
+                    togglePause();
+                    break;
+                case 'f':
+                    document.getElementById('fpsCounter').classList.toggle('visible');
+                    break;
+                case 'h':
+                    document.getElementById('helpOverlay').classList.toggle('visible');
+                    break;
+                case 'escape':
+                    const settingsPanel = document.getElementById('settingsPanel');
+                    const helpOverlay = document.getElementById('helpOverlay');
+                    if (settingsPanel.classList.contains('visible')) {
+                        settingsPanel.classList.remove('visible');
+                    } else if (helpOverlay.classList.contains('visible')) {
+                        helpOverlay.classList.remove('visible');
+                    } else {
+                        settingsPanel.classList.add('visible');
+                    }
+                    break;
             }
         });
 
@@ -504,14 +1192,27 @@
         function animate() {
             requestAnimationFrame(animate);
 
-            analyser.getByteFrequencyData(dataArray);
+            // FPS calculation
+            const currentTime = performance.now();
+            frameCount++;
+            if (currentTime - fpsUpdateTime >= 1000) {
+                fps = Math.round(frameCount * 1000 / (currentTime - fpsUpdateTime));
+                document.getElementById('fpsValue').textContent = fps;
+                frameCount = 0;
+                fpsUpdateTime = currentTime;
+            }
 
-            visualizers[visualMode].update(dataArray);
+            // Only update visualization if not paused
+            if (!isPaused) {
+                analyser.getByteFrequencyData(dataArray);
+                visualizers[visualMode].update(dataArray);
 
-            // Camera rotation
-            camera.position.x = Math.sin(Date.now() * 0.0001) * 35;
-            camera.position.z = Math.cos(Date.now() * 0.0001) * 35;
-            camera.lookAt(0, 0, 0);
+                // Camera rotation
+                const rotationFactor = config.rotationSpeed * 0.0001;
+                camera.position.x = Math.sin(Date.now() * rotationFactor) * 35;
+                camera.position.z = Math.cos(Date.now() * rotationFactor) * 35;
+                camera.lookAt(0, 0, 0);
+            }
 
             renderer.render(scene, camera);
         }
@@ -523,7 +1224,27 @@
             renderer.setSize(window.innerWidth, window.innerHeight);
         });
 
+        // Mobile touch controls
+        let touchStartTime = 0;
+        renderer.domElement.addEventListener('touchstart', () => {
+            touchStartTime = Date.now();
+        });
+
+        renderer.domElement.addEventListener('touchend', (e) => {
+            const touchDuration = Date.now() - touchStartTime;
+            if (touchDuration < 300) { // Quick tap
+                if (audio || mediaStream || oscillator) {
+                    togglePause();
+                }
+            }
+            e.preventDefault();
+        });
+
+        // Start animation
         animate();
+
+        // Update status on load
+        updateStatus();
     </script>
 </body>
 </html>
