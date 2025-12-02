@@ -1,0 +1,1050 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>3D Particle Song Generator</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <style>
+        body {
+            margin: 0;
+            overflow: hidden;
+            background: #000;
+            font-family: 'Courier New', monospace;
+        }
+        canvas { display: block; }
+
+        #ui {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            color: #00ffcc;
+            font-size: 13px;
+            background: rgba(0, 10, 30, 0.85);
+            padding: 20px;
+            border-radius: 12px;
+            border: 2px solid #00ffcc;
+            box-shadow: 0 0 30px rgba(0, 255, 204, 0.3);
+            max-width: 280px;
+        }
+
+        #ui h1 {
+            margin: 0 0 15px 0;
+            font-size: 18px;
+            text-shadow: 0 0 10px #00ffcc;
+        }
+
+        .control-section {
+            margin: 12px 0;
+            padding: 10px 0;
+            border-top: 1px solid rgba(0, 255, 204, 0.3);
+        }
+
+        .control-section h3 {
+            margin: 0 0 8px 0;
+            font-size: 11px;
+            color: #88ffee;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .btn-row {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+            margin-top: 8px;
+        }
+
+        .btn {
+            background: rgba(0, 255, 204, 0.15);
+            border: 1px solid #00ffcc;
+            color: #00ffcc;
+            padding: 8px 12px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-family: inherit;
+            font-size: 11px;
+            transition: all 0.2s;
+        }
+
+        .btn:hover {
+            background: rgba(0, 255, 204, 0.35);
+            transform: translateY(-1px);
+        }
+
+        .btn.active {
+            background: rgba(0, 255, 204, 0.5);
+            box-shadow: 0 0 15px rgba(0, 255, 204, 0.4);
+        }
+
+        .slider-group {
+            margin: 8px 0;
+        }
+
+        .slider-group label {
+            display: block;
+            font-size: 10px;
+            color: #88ffee;
+            margin-bottom: 4px;
+        }
+
+        .slider-group input[type="range"] {
+            width: 100%;
+            height: 6px;
+            -webkit-appearance: none;
+            background: rgba(0, 255, 204, 0.2);
+            border-radius: 3px;
+            outline: none;
+        }
+
+        .slider-group input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 14px;
+            height: 14px;
+            background: #00ffcc;
+            border-radius: 50%;
+            cursor: pointer;
+        }
+
+        #stats {
+            position: absolute;
+            bottom: 20px;
+            left: 20px;
+            color: #00ffcc;
+            font-size: 11px;
+            background: rgba(0, 10, 30, 0.85);
+            padding: 12px 16px;
+            border-radius: 8px;
+            border: 1px solid #00ffcc;
+        }
+
+        #visualizer {
+            position: absolute;
+            bottom: 20px;
+            right: 20px;
+            width: 200px;
+            height: 80px;
+            background: rgba(0, 10, 30, 0.85);
+            border: 1px solid #00ffcc;
+            border-radius: 8px;
+        }
+
+        #help {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            color: #00ffcc;
+            font-size: 10px;
+            background: rgba(0, 10, 30, 0.85);
+            padding: 15px;
+            border-radius: 8px;
+            border: 1px solid rgba(0, 255, 204, 0.5);
+        }
+
+        #welcome {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            text-align: center;
+            color: #00ffcc;
+            background: rgba(0, 10, 30, 0.95);
+            padding: 50px;
+            border-radius: 20px;
+            border: 3px solid #00ffcc;
+            box-shadow: 0 0 50px rgba(0, 255, 204, 0.5);
+            z-index: 1000;
+        }
+
+        #welcome.hidden { display: none; }
+
+        #welcome h1 {
+            font-size: 36px;
+            margin: 0 0 20px 0;
+            text-shadow: 0 0 20px #00ffcc;
+        }
+
+        #welcome p {
+            font-size: 14px;
+            margin: 10px 0;
+            color: #88ffee;
+        }
+
+        #startBtn {
+            margin-top: 30px;
+            padding: 18px 50px;
+            font-size: 18px;
+            background: rgba(0, 255, 204, 0.3);
+            border: 3px solid #00ffcc;
+            color: #00ffcc;
+            border-radius: 12px;
+            cursor: pointer;
+            font-family: inherit;
+            font-weight: bold;
+            transition: all 0.3s;
+        }
+
+        #startBtn:hover {
+            background: rgba(0, 255, 204, 0.5);
+            transform: scale(1.05);
+            box-shadow: 0 0 30px rgba(0, 255, 204, 0.6);
+        }
+
+        #fileInput { display: none; }
+    </style>
+</head>
+<body>
+    <div id="welcome">
+        <h1>3D PARTICLE SONG GENERATOR</h1>
+        <p>Create music through particle interactions</p>
+        <p>Move particles to generate melodies</p>
+        <p>Load your own audio or use the synthesizer</p>
+        <button id="startBtn">ENTER THE WORLD</button>
+        <input type="file" id="fileInput" accept="audio/*">
+    </div>
+
+    <div id="ui">
+        <h1>PARTICLE SONG</h1>
+
+        <div class="control-section">
+            <h3>Particle Mode</h3>
+            <div class="btn-row">
+                <button class="btn active" data-pmode="attract">Attract</button>
+                <button class="btn" data-pmode="repel">Repel</button>
+                <button class="btn" data-pmode="orbit">Orbit</button>
+                <button class="btn" data-pmode="wave">Wave</button>
+                <button class="btn" data-pmode="spiral">Spiral</button>
+            </div>
+        </div>
+
+        <div class="control-section">
+            <h3>Sound Mode</h3>
+            <div class="btn-row">
+                <button class="btn active" data-smode="synth">Synth</button>
+                <button class="btn" data-smode="ambient">Ambient</button>
+                <button class="btn" data-smode="drums">Drums</button>
+                <button class="btn" data-smode="melody">Melody</button>
+            </div>
+        </div>
+
+        <div class="control-section">
+            <h3>World Style</h3>
+            <div class="btn-row">
+                <button class="btn active" data-world="cosmic">Cosmic</button>
+                <button class="btn" data-world="ocean">Ocean</button>
+                <button class="btn" data-world="fire">Fire</button>
+                <button class="btn" data-world="forest">Forest</button>
+            </div>
+        </div>
+
+        <div class="control-section">
+            <div class="slider-group">
+                <label>Particle Size: <span id="sizeVal">1.0</span></label>
+                <input type="range" id="sizeSlider" min="0.2" max="3" step="0.1" value="1">
+            </div>
+            <div class="slider-group">
+                <label>Volume: <span id="volVal">50</span>%</label>
+                <input type="range" id="volumeSlider" min="0" max="100" step="1" value="50">
+            </div>
+            <div class="slider-group">
+                <label>Tempo: <span id="tempoVal">120</span> BPM</label>
+                <input type="range" id="tempoSlider" min="60" max="200" step="1" value="120">
+            </div>
+        </div>
+
+        <div class="btn-row">
+            <button class="btn" id="loadAudioBtn">Load Audio</button>
+            <button class="btn" id="resetBtn">Reset</button>
+        </div>
+    </div>
+
+    <div id="stats">
+        Particles: <span id="particleCount">0</span> |
+        FPS: <span id="fps">0</span> |
+        Notes: <span id="noteCount">0</span>
+    </div>
+
+    <canvas id="visualizer"></canvas>
+
+    <div id="help">
+        <strong>Controls:</strong><br>
+        Mouse: Move particles<br>
+        Click: Trigger sound burst<br>
+        1-5: Particle modes<br>
+        Q/W/E/R: Sound modes<br>
+        Space: Reset particles<br>
+        Arrow keys: Move camera
+    </div>
+
+    <script>
+        // ============ AUDIO ENGINE ============
+        let audioContext;
+        let masterGain;
+        let analyser;
+        let dataArray;
+        const bufferLength = 128;
+        let isAudioStarted = false;
+        let loadedAudio = null;
+        let audioSource = null;
+
+        // Sound settings
+        let soundMode = 'synth';
+        let volume = 0.5;
+        let tempo = 120;
+
+        // Active oscillators
+        const activeOscillators = [];
+        const noteHistory = [];
+        const scales = {
+            pentatonic: [0, 2, 4, 7, 9],
+            major: [0, 2, 4, 5, 7, 9, 11],
+            minor: [0, 2, 3, 5, 7, 8, 10],
+            chromatic: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]
+        };
+        let currentScale = scales.pentatonic;
+
+        function initAudio() {
+            audioContext = new (window.AudioContext || window.webkitAudioContext)();
+
+            masterGain = audioContext.createGain();
+            masterGain.gain.value = volume;
+
+            analyser = audioContext.createAnalyser();
+            analyser.fftSize = 256;
+            dataArray = new Uint8Array(analyser.frequencyBinCount);
+
+            masterGain.connect(analyser);
+            analyser.connect(audioContext.destination);
+
+            isAudioStarted = true;
+        }
+
+        function noteToFreq(note) {
+            return 440 * Math.pow(2, (note - 69) / 12);
+        }
+
+        function playNote(freq, duration, type = 'sine', detune = 0) {
+            if (!isAudioStarted) return;
+
+            const osc = audioContext.createOscillator();
+            const gain = audioContext.createGain();
+
+            osc.type = type;
+            osc.frequency.value = freq;
+            osc.detune.value = detune;
+
+            gain.gain.setValueAtTime(volume * 0.3, audioContext.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.001, audioContext.currentTime + duration);
+
+            osc.connect(gain);
+            gain.connect(masterGain);
+
+            osc.start();
+            osc.stop(audioContext.currentTime + duration);
+
+            noteHistory.push({ freq, time: Date.now() });
+            if (noteHistory.length > 50) noteHistory.shift();
+        }
+
+        function playDrum(type) {
+            if (!isAudioStarted) return;
+
+            const osc = audioContext.createOscillator();
+            const gain = audioContext.createGain();
+            const filter = audioContext.createBiquadFilter();
+
+            if (type === 'kick') {
+                osc.frequency.setValueAtTime(150, audioContext.currentTime);
+                osc.frequency.exponentialRampToValueAtTime(0.001, audioContext.currentTime + 0.5);
+                gain.gain.setValueAtTime(volume, audioContext.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.001, audioContext.currentTime + 0.5);
+            } else if (type === 'snare') {
+                osc.type = 'triangle';
+                osc.frequency.value = 200;
+                gain.gain.setValueAtTime(volume * 0.5, audioContext.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.001, audioContext.currentTime + 0.2);
+
+                // Add noise for snare
+                const noise = audioContext.createBufferSource();
+                const noiseBuffer = audioContext.createBuffer(1, audioContext.sampleRate * 0.2, audioContext.sampleRate);
+                const output = noiseBuffer.getChannelData(0);
+                for (let i = 0; i < output.length; i++) {
+                    output[i] = Math.random() * 2 - 1;
+                }
+                noise.buffer = noiseBuffer;
+                const noiseGain = audioContext.createGain();
+                noiseGain.gain.setValueAtTime(volume * 0.3, audioContext.currentTime);
+                noiseGain.gain.exponentialRampToValueAtTime(0.001, audioContext.currentTime + 0.2);
+                noise.connect(noiseGain);
+                noiseGain.connect(masterGain);
+                noise.start();
+            } else if (type === 'hihat') {
+                osc.type = 'square';
+                osc.frequency.value = 800;
+                gain.gain.setValueAtTime(volume * 0.2, audioContext.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.001, audioContext.currentTime + 0.05);
+            }
+
+            osc.connect(gain);
+            gain.connect(masterGain);
+            osc.start();
+            osc.stop(audioContext.currentTime + 0.5);
+        }
+
+        function generateSoundFromParticle(x, y, z, velocity) {
+            if (!isAudioStarted) return;
+
+            // Map particle position to musical parameters
+            const normalizedX = (x + 50) / 100; // 0-1
+            const normalizedY = (y + 50) / 100; // 0-1
+            const normalizedZ = (z + 25) / 50;  // 0-1
+
+            const baseNote = 48 + Math.floor(normalizedY * 24); // C3 to C5
+            const scaleIndex = Math.floor(normalizedX * currentScale.length);
+            const note = baseNote + currentScale[scaleIndex % currentScale.length];
+            const freq = noteToFreq(note);
+
+            const duration = 0.1 + normalizedZ * 0.5;
+            const detune = (Math.random() - 0.5) * 10;
+
+            if (soundMode === 'synth') {
+                playNote(freq, duration, 'sawtooth', detune);
+            } else if (soundMode === 'ambient') {
+                playNote(freq * 0.5, duration * 3, 'sine', detune);
+                playNote(freq, duration * 2, 'sine', detune + 5);
+            } else if (soundMode === 'drums') {
+                if (normalizedY < 0.3) playDrum('kick');
+                else if (normalizedY < 0.6) playDrum('snare');
+                else playDrum('hihat');
+            } else if (soundMode === 'melody') {
+                const types = ['sine', 'triangle', 'square'];
+                playNote(freq, duration, types[Math.floor(Math.random() * 3)], detune);
+            }
+        }
+
+        // ============ THREE.JS SCENE ============
+        let scene, camera, renderer;
+        let particles, particleCount = 6000;
+        let positions, velocities, colors, sizes;
+        let mouse = new THREE.Vector3();
+        let raycaster = new THREE.Raycaster();
+        let mouseVector = new THREE.Vector2();
+
+        let particleMode = 'attract';
+        let worldStyle = 'cosmic';
+
+        // World elements
+        let ground, skybox, ambientParticles;
+        let worldObjects = [];
+
+        // Camera movement
+        let cameraAngle = 0;
+        let cameraHeight = 30;
+        let cameraDistance = 80;
+
+        // Stats
+        let lastTime = performance.now();
+        let frameCount = 0;
+        let fps = 0;
+
+        function init() {
+            scene = new THREE.Scene();
+
+            camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 2000);
+            camera.position.set(0, 30, 80);
+
+            renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            renderer.setPixelRatio(window.devicePixelRatio);
+            document.body.appendChild(renderer.domElement);
+
+            createWorld();
+            createParticles();
+            createAmbientParticles();
+
+            // Event listeners
+            document.addEventListener('mousemove', onMouseMove);
+            document.addEventListener('click', onMouseClick);
+            document.addEventListener('keydown', onKeyDown);
+            window.addEventListener('resize', onResize);
+
+            setupUI();
+            animate();
+        }
+
+        function createWorld() {
+            // Clear old world
+            worldObjects.forEach(obj => scene.remove(obj));
+            worldObjects = [];
+
+            // Set colors based on world style
+            let bgColor, groundColor, fogColor;
+
+            switch(worldStyle) {
+                case 'cosmic':
+                    bgColor = 0x000011;
+                    groundColor = 0x001133;
+                    fogColor = 0x000022;
+                    currentScale = scales.pentatonic;
+                    break;
+                case 'ocean':
+                    bgColor = 0x001a33;
+                    groundColor = 0x003366;
+                    fogColor = 0x004488;
+                    currentScale = scales.minor;
+                    break;
+                case 'fire':
+                    bgColor = 0x1a0500;
+                    groundColor = 0x331100;
+                    fogColor = 0x220800;
+                    currentScale = scales.chromatic;
+                    break;
+                case 'forest':
+                    bgColor = 0x001100;
+                    groundColor = 0x002200;
+                    fogColor = 0x003300;
+                    currentScale = scales.major;
+                    break;
+            }
+
+            scene.background = new THREE.Color(bgColor);
+            scene.fog = new THREE.FogExp2(fogColor, 0.008);
+
+            // Ground plane with grid
+            const groundGeom = new THREE.PlaneGeometry(500, 500, 50, 50);
+            const groundMat = new THREE.MeshBasicMaterial({
+                color: groundColor,
+                wireframe: true,
+                transparent: true,
+                opacity: 0.3
+            });
+            ground = new THREE.Mesh(groundGeom, groundMat);
+            ground.rotation.x = -Math.PI / 2;
+            ground.position.y = -50;
+            scene.add(ground);
+            worldObjects.push(ground);
+
+            // Glowing orbs in the world
+            for (let i = 0; i < 20; i++) {
+                const orbGeom = new THREE.SphereGeometry(Math.random() * 3 + 1, 16, 16);
+                const hue = worldStyle === 'cosmic' ? 0.5 + Math.random() * 0.3 :
+                           worldStyle === 'ocean' ? 0.5 + Math.random() * 0.1 :
+                           worldStyle === 'fire' ? Math.random() * 0.1 :
+                           0.25 + Math.random() * 0.1;
+                const orbMat = new THREE.MeshBasicMaterial({
+                    color: new THREE.Color().setHSL(hue, 1, 0.5),
+                    transparent: true,
+                    opacity: 0.6
+                });
+                const orb = new THREE.Mesh(orbGeom, orbMat);
+                orb.position.set(
+                    (Math.random() - 0.5) * 200,
+                    (Math.random() - 0.5) * 80 - 20,
+                    (Math.random() - 0.5) * 200
+                );
+                orb.userData = { phase: Math.random() * Math.PI * 2 };
+                scene.add(orb);
+                worldObjects.push(orb);
+            }
+
+            // Floating rings
+            for (let i = 0; i < 8; i++) {
+                const ringGeom = new THREE.TorusGeometry(10 + Math.random() * 15, 0.3, 8, 50);
+                const ringMat = new THREE.MeshBasicMaterial({
+                    color: new THREE.Color().setHSL(Math.random(), 0.8, 0.5),
+                    wireframe: true,
+                    transparent: true,
+                    opacity: 0.4
+                });
+                const ring = new THREE.Mesh(ringGeom, ringMat);
+                ring.position.set(
+                    (Math.random() - 0.5) * 150,
+                    (Math.random() - 0.5) * 60,
+                    (Math.random() - 0.5) * 150
+                );
+                ring.rotation.set(Math.random() * Math.PI, Math.random() * Math.PI, 0);
+                ring.userData = { rotSpeed: (Math.random() - 0.5) * 0.02 };
+                scene.add(ring);
+                worldObjects.push(ring);
+            }
+        }
+
+        function createAmbientParticles() {
+            // Background stars/particles
+            const starGeom = new THREE.BufferGeometry();
+            const starCount = 2000;
+            const starPositions = new Float32Array(starCount * 3);
+            const starColors = new Float32Array(starCount * 3);
+
+            for (let i = 0; i < starCount; i++) {
+                const i3 = i * 3;
+                const radius = 200 + Math.random() * 500;
+                const theta = Math.random() * Math.PI * 2;
+                const phi = Math.random() * Math.PI;
+
+                starPositions[i3] = radius * Math.sin(phi) * Math.cos(theta);
+                starPositions[i3 + 1] = radius * Math.cos(phi);
+                starPositions[i3 + 2] = radius * Math.sin(phi) * Math.sin(theta);
+
+                const brightness = 0.3 + Math.random() * 0.7;
+                starColors[i3] = brightness;
+                starColors[i3 + 1] = brightness;
+                starColors[i3 + 2] = brightness;
+            }
+
+            starGeom.setAttribute('position', new THREE.BufferAttribute(starPositions, 3));
+            starGeom.setAttribute('color', new THREE.BufferAttribute(starColors, 3));
+
+            const starMat = new THREE.PointsMaterial({
+                size: 1.5,
+                vertexColors: true,
+                transparent: true,
+                opacity: 0.8
+            });
+
+            ambientParticles = new THREE.Points(starGeom, starMat);
+            scene.add(ambientParticles);
+        }
+
+        function createParticles() {
+            if (particles) scene.remove(particles);
+
+            const geometry = new THREE.BufferGeometry();
+
+            positions = new Float32Array(particleCount * 3);
+            velocities = new Float32Array(particleCount * 3);
+            colors = new Float32Array(particleCount * 3);
+            sizes = new Float32Array(particleCount);
+
+            for (let i = 0; i < particleCount; i++) {
+                const i3 = i * 3;
+
+                // Spawn in a sphere shape
+                const radius = 20 + Math.random() * 30;
+                const theta = Math.random() * Math.PI * 2;
+                const phi = Math.random() * Math.PI;
+
+                positions[i3] = radius * Math.sin(phi) * Math.cos(theta);
+                positions[i3 + 1] = radius * Math.cos(phi);
+                positions[i3 + 2] = radius * Math.sin(phi) * Math.sin(theta);
+
+                velocities[i3] = (Math.random() - 0.5) * 0.3;
+                velocities[i3 + 1] = (Math.random() - 0.5) * 0.3;
+                velocities[i3 + 2] = (Math.random() - 0.5) * 0.3;
+
+                const hue = Math.random();
+                const color = new THREE.Color().setHSL(hue, 1.0, 0.6);
+                colors[i3] = color.r;
+                colors[i3 + 1] = color.g;
+                colors[i3 + 2] = color.b;
+
+                sizes[i] = 0.5 + Math.random() * 0.5;
+            }
+
+            geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+            geometry.setAttribute('color', new THREE.BufferAttribute(colors, 3));
+            geometry.setAttribute('size', new THREE.BufferAttribute(sizes, 1));
+
+            const material = new THREE.PointsMaterial({
+                size: 1.0,
+                vertexColors: true,
+                transparent: true,
+                opacity: 0.9,
+                blending: THREE.AdditiveBlending,
+                sizeAttenuation: true
+            });
+
+            particles = new THREE.Points(geometry, material);
+            scene.add(particles);
+
+            document.getElementById('particleCount').textContent = particleCount;
+        }
+
+        function onMouseMove(event) {
+            mouseVector.x = (event.clientX / window.innerWidth) * 2 - 1;
+            mouseVector.y = -(event.clientY / window.innerHeight) * 2 + 1;
+
+            raycaster.setFromCamera(mouseVector, camera);
+            const distance = 60;
+            mouse.copy(raycaster.ray.direction).multiplyScalar(distance).add(camera.position);
+        }
+
+        function onMouseClick() {
+            if (!isAudioStarted) return;
+
+            // Explosion effect with sound burst
+            let triggeredCount = 0;
+
+            for (let i = 0; i < particleCount; i++) {
+                const i3 = i * 3;
+                const dx = positions[i3] - mouse.x;
+                const dy = positions[i3 + 1] - mouse.y;
+                const dz = positions[i3 + 2] - mouse.z;
+                const distance = Math.sqrt(dx * dx + dy * dy + dz * dz);
+
+                if (distance < 30) {
+                    const force = (30 - distance) / 30;
+                    velocities[i3] += (dx / distance) * force * 8;
+                    velocities[i3 + 1] += (dy / distance) * force * 8;
+                    velocities[i3 + 2] += (dz / distance) * force * 8;
+
+                    if (triggeredCount < 8 && Math.random() < 0.3) {
+                        generateSoundFromParticle(positions[i3], positions[i3 + 1], positions[i3 + 2], force);
+                        triggeredCount++;
+                    }
+                }
+            }
+
+            // Always play a base sound on click
+            if (soundMode === 'drums') {
+                playDrum('kick');
+            } else {
+                playNote(noteToFreq(48 + Math.floor(Math.random() * 12)), 0.3, 'sine', 0);
+            }
+        }
+
+        function onKeyDown(event) {
+            switch(event.code) {
+                case 'Space':
+                    event.preventDefault();
+                    resetParticles();
+                    break;
+                case 'Digit1': setParticleMode('attract'); break;
+                case 'Digit2': setParticleMode('repel'); break;
+                case 'Digit3': setParticleMode('orbit'); break;
+                case 'Digit4': setParticleMode('wave'); break;
+                case 'Digit5': setParticleMode('spiral'); break;
+                case 'KeyQ': setSoundMode('synth'); break;
+                case 'KeyW': setSoundMode('ambient'); break;
+                case 'KeyE': setSoundMode('drums'); break;
+                case 'KeyR': setSoundMode('melody'); break;
+                case 'ArrowLeft': cameraAngle -= 0.1; break;
+                case 'ArrowRight': cameraAngle += 0.1; break;
+                case 'ArrowUp': cameraHeight = Math.min(80, cameraHeight + 5); break;
+                case 'ArrowDown': cameraHeight = Math.max(-20, cameraHeight - 5); break;
+            }
+        }
+
+        function setParticleMode(mode) {
+            particleMode = mode;
+            document.querySelectorAll('[data-pmode]').forEach(btn => {
+                btn.classList.toggle('active', btn.dataset.pmode === mode);
+            });
+        }
+
+        function setSoundMode(mode) {
+            soundMode = mode;
+            document.querySelectorAll('[data-smode]').forEach(btn => {
+                btn.classList.toggle('active', btn.dataset.smode === mode);
+            });
+        }
+
+        function setWorldStyle(style) {
+            worldStyle = style;
+            createWorld();
+            document.querySelectorAll('[data-world]').forEach(btn => {
+                btn.classList.toggle('active', btn.dataset.world === style);
+            });
+        }
+
+        function resetParticles() {
+            for (let i = 0; i < particleCount; i++) {
+                const i3 = i * 3;
+                const radius = 20 + Math.random() * 30;
+                const theta = Math.random() * Math.PI * 2;
+                const phi = Math.random() * Math.PI;
+
+                positions[i3] = radius * Math.sin(phi) * Math.cos(theta);
+                positions[i3 + 1] = radius * Math.cos(phi);
+                positions[i3 + 2] = radius * Math.sin(phi) * Math.sin(theta);
+
+                velocities[i3] = 0;
+                velocities[i3 + 1] = 0;
+                velocities[i3 + 2] = 0;
+            }
+        }
+
+        function updateParticles() {
+            const time = Date.now() * 0.001;
+            let soundTriggerCount = 0;
+            const maxSoundTriggers = 3; // Limit sounds per frame
+
+            for (let i = 0; i < particleCount; i++) {
+                const i3 = i * 3;
+
+                const dx = mouse.x - positions[i3];
+                const dy = mouse.y - positions[i3 + 1];
+                const dz = mouse.z - positions[i3 + 2];
+                const distance = Math.sqrt(dx * dx + dy * dy + dz * dz);
+
+                // Apply forces based on mode
+                if (particleMode === 'attract' && distance > 1) {
+                    const force = 0.03 / distance;
+                    velocities[i3] += dx * force;
+                    velocities[i3 + 1] += dy * force;
+                    velocities[i3 + 2] += dz * force;
+                } else if (particleMode === 'repel' && distance < 40) {
+                    const force = 0.4 / (distance + 1);
+                    velocities[i3] -= dx * force;
+                    velocities[i3 + 1] -= dy * force;
+                    velocities[i3 + 2] -= dz * force;
+                } else if (particleMode === 'orbit') {
+                    const angle = Math.atan2(dy, dx);
+                    velocities[i3] += -Math.sin(angle) * 0.08;
+                    velocities[i3 + 1] += Math.cos(angle) * 0.08;
+                    velocities[i3 + 2] += (dz > 0 ? -1 : 1) * 0.02;
+                } else if (particleMode === 'wave') {
+                    velocities[i3 + 1] += Math.sin(time + positions[i3] * 0.1) * 0.04;
+                    velocities[i3] += Math.cos(time * 0.5 + positions[i3 + 2] * 0.1) * 0.02;
+                } else if (particleMode === 'spiral') {
+                    const angle = Math.atan2(positions[i3 + 2], positions[i3]);
+                    const r = Math.sqrt(positions[i3] * positions[i3] + positions[i3 + 2] * positions[i3 + 2]);
+                    velocities[i3] += -Math.sin(angle + time) * 0.05;
+                    velocities[i3 + 2] += Math.cos(angle + time) * 0.05;
+                    velocities[i3 + 1] += Math.sin(r * 0.1 + time) * 0.03;
+                }
+
+                // Audio reactivity if audio is playing
+                if (dataArray && loadedAudio) {
+                    const freqIndex = Math.floor((i / particleCount) * bufferLength);
+                    const freqValue = dataArray[freqIndex] / 255;
+
+                    velocities[i3] += (Math.random() - 0.5) * freqValue * 0.3;
+                    velocities[i3 + 1] += freqValue * 0.2;
+                    velocities[i3 + 2] += (Math.random() - 0.5) * freqValue * 0.3;
+                }
+
+                // Apply velocity
+                positions[i3] += velocities[i3];
+                positions[i3 + 1] += velocities[i3 + 1];
+                positions[i3 + 2] += velocities[i3 + 2];
+
+                // Damping
+                velocities[i3] *= 0.97;
+                velocities[i3 + 1] *= 0.97;
+                velocities[i3 + 2] *= 0.97;
+
+                // Soft boundaries
+                const boundary = 60;
+                if (Math.abs(positions[i3]) > boundary) {
+                    velocities[i3] *= -0.5;
+                    positions[i3] = Math.sign(positions[i3]) * boundary;
+                }
+                if (Math.abs(positions[i3 + 1]) > boundary) {
+                    velocities[i3 + 1] *= -0.5;
+                    positions[i3 + 1] = Math.sign(positions[i3 + 1]) * boundary;
+                }
+                if (Math.abs(positions[i3 + 2]) > boundary) {
+                    velocities[i3 + 2] *= -0.5;
+                    positions[i3 + 2] = Math.sign(positions[i3 + 2]) * boundary;
+                }
+
+                // Calculate speed for color and sound
+                const speed = Math.sqrt(
+                    velocities[i3] * velocities[i3] +
+                    velocities[i3 + 1] * velocities[i3 + 1] +
+                    velocities[i3 + 2] * velocities[i3 + 2]
+                );
+
+                // Trigger sound for fast-moving particles
+                if (speed > 1.5 && soundTriggerCount < maxSoundTriggers && Math.random() < 0.01) {
+                    generateSoundFromParticle(positions[i3], positions[i3 + 1], positions[i3 + 2], speed);
+                    soundTriggerCount++;
+                }
+
+                // Update colors based on velocity/world
+                let hue;
+                switch(worldStyle) {
+                    case 'cosmic': hue = 0.5 + speed * 0.2; break;
+                    case 'ocean': hue = 0.55 + speed * 0.1; break;
+                    case 'fire': hue = speed * 0.1; break;
+                    case 'forest': hue = 0.25 + speed * 0.15; break;
+                    default: hue = speed * 0.3;
+                }
+                const color = new THREE.Color().setHSL(hue % 1, 1.0, 0.5 + speed * 0.1);
+                colors[i3] = color.r;
+                colors[i3 + 1] = color.g;
+                colors[i3 + 2] = color.b;
+            }
+
+            particles.geometry.attributes.position.needsUpdate = true;
+            particles.geometry.attributes.color.needsUpdate = true;
+        }
+
+        function updateWorld() {
+            const time = Date.now() * 0.001;
+
+            worldObjects.forEach(obj => {
+                if (obj.userData.phase !== undefined) {
+                    // Floating orbs
+                    obj.position.y += Math.sin(time + obj.userData.phase) * 0.02;
+                }
+                if (obj.userData.rotSpeed !== undefined) {
+                    // Rotating rings
+                    obj.rotation.z += obj.userData.rotSpeed;
+                    obj.rotation.x += obj.userData.rotSpeed * 0.5;
+                }
+            });
+
+            // Rotate ambient particles slowly
+            if (ambientParticles) {
+                ambientParticles.rotation.y += 0.0001;
+            }
+
+            // Ground wave
+            if (ground && ground.geometry.attributes.position) {
+                const groundPos = ground.geometry.attributes.position.array;
+                for (let i = 0; i < groundPos.length; i += 3) {
+                    const x = groundPos[i];
+                    const y = groundPos[i + 1];
+                    groundPos[i + 2] = Math.sin(x * 0.05 + time) * Math.cos(y * 0.05 + time) * 3;
+                }
+                ground.geometry.attributes.position.needsUpdate = true;
+            }
+        }
+
+        function drawVisualizer() {
+            if (!analyser) return;
+
+            analyser.getByteFrequencyData(dataArray);
+
+            const canvas = document.getElementById('visualizer');
+            const ctx = canvas.getContext('2d');
+            const width = canvas.width = 200;
+            const height = canvas.height = 80;
+
+            ctx.fillStyle = 'rgba(0, 10, 30, 0.9)';
+            ctx.fillRect(0, 0, width, height);
+
+            const barWidth = width / bufferLength * 2;
+            let x = 0;
+
+            for (let i = 0; i < bufferLength; i++) {
+                const barHeight = (dataArray[i] / 255) * height;
+
+                const hue = i / bufferLength * 0.3 + 0.5;
+                ctx.fillStyle = `hsl(${hue * 360}, 100%, 50%)`;
+                ctx.fillRect(x, height - barHeight, barWidth - 1, barHeight);
+
+                x += barWidth;
+            }
+        }
+
+        function setupUI() {
+            // Particle mode buttons
+            document.querySelectorAll('[data-pmode]').forEach(btn => {
+                btn.addEventListener('click', () => setParticleMode(btn.dataset.pmode));
+            });
+
+            // Sound mode buttons
+            document.querySelectorAll('[data-smode]').forEach(btn => {
+                btn.addEventListener('click', () => setSoundMode(btn.dataset.smode));
+            });
+
+            // World style buttons
+            document.querySelectorAll('[data-world]').forEach(btn => {
+                btn.addEventListener('click', () => setWorldStyle(btn.dataset.world));
+            });
+
+            // Sliders
+            document.getElementById('sizeSlider').addEventListener('input', (e) => {
+                const size = parseFloat(e.target.value);
+                document.getElementById('sizeVal').textContent = size.toFixed(1);
+                if (particles) particles.material.size = size;
+            });
+
+            document.getElementById('volumeSlider').addEventListener('input', (e) => {
+                volume = parseInt(e.target.value) / 100;
+                document.getElementById('volVal').textContent = e.target.value;
+                if (masterGain) masterGain.gain.value = volume;
+            });
+
+            document.getElementById('tempoSlider').addEventListener('input', (e) => {
+                tempo = parseInt(e.target.value);
+                document.getElementById('tempoVal').textContent = tempo;
+            });
+
+            // Load audio button
+            document.getElementById('loadAudioBtn').addEventListener('click', () => {
+                document.getElementById('fileInput').click();
+            });
+
+            document.getElementById('fileInput').addEventListener('change', (e) => {
+                const file = e.target.files[0];
+                if (file) {
+                    loadAudioFile(file);
+                }
+            });
+
+            // Reset button
+            document.getElementById('resetBtn').addEventListener('click', resetParticles);
+
+            // Start button
+            document.getElementById('startBtn').addEventListener('click', startExperience);
+        }
+
+        function loadAudioFile(file) {
+            const url = URL.createObjectURL(file);
+
+            if (loadedAudio) {
+                loadedAudio.pause();
+            }
+
+            loadedAudio = new Audio(url);
+            audioSource = audioContext.createMediaElementSource(loadedAudio);
+            audioSource.connect(masterGain);
+
+            loadedAudio.play();
+        }
+
+        function startExperience() {
+            initAudio();
+            document.getElementById('welcome').classList.add('hidden');
+        }
+
+        function onResize() {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        }
+
+        function updateStats() {
+            frameCount++;
+            const now = performance.now();
+            if (now - lastTime >= 1000) {
+                fps = frameCount;
+                frameCount = 0;
+                lastTime = now;
+                document.getElementById('fps').textContent = fps;
+            }
+
+            const recentNotes = noteHistory.filter(n => Date.now() - n.time < 1000).length;
+            document.getElementById('noteCount').textContent = recentNotes;
+        }
+
+        function animate() {
+            requestAnimationFrame(animate);
+
+            updateParticles();
+            updateWorld();
+
+            // Camera orbit
+            cameraAngle += 0.001;
+            camera.position.x = Math.sin(cameraAngle) * cameraDistance;
+            camera.position.z = Math.cos(cameraAngle) * cameraDistance;
+            camera.position.y = cameraHeight;
+            camera.lookAt(0, 0, 0);
+
+            if (analyser) {
+                analyser.getByteFrequencyData(dataArray);
+            }
+
+            drawVisualizer();
+            updateStats();
+
+            renderer.render(scene, camera);
+        }
+
+        init();
+    </script>
+</body>
+</html>
