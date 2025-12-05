@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html><head>
+<meta charset="UTF-8"><title>Wave Synthesizer</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<style>
+body{margin:0;overflow:hidden;background:#000}canvas{display:block}
+.hud{position:absolute;top:20px;left:20px;color:#0f8;font-family:'Courier New',monospace;font-size:14px;background:rgba(0,20,40,.8);padding:15px;border-radius:8px;border:2px solid #0f8}
+.stats{position:absolute;bottom:20px;left:20px;color:#0f8;font-family:'Courier New',monospace;font-size:11px;background:rgba(0,20,40,.8);padding:10px;border-radius:8px;border:1px solid #0f8}
+</style></head><body>
+<div class="hud">🌊 <strong>WAVE SYNTHESIZER</strong><br><small>• Click: Add wave source<br>• 1-4: Change pattern<br>• Scroll: Wave speed<br>• Space: Clear sources</small></div>
+<div class="stats">Sources: <span id="sources">0</span> | Mode: <span id="mode">Ripple</span></div>
+<script>
+let scene,camera,renderer,plane,sources=[],time=0,waveSpeed=1,mode='ripple';
+const RES=100,SIZE=50;
+function init(){
+    scene=new THREE.Scene();
+    camera=new THREE.PerspectiveCamera(60,innerWidth/innerHeight,.1,1000);
+    camera.position.set(0,40,40);camera.lookAt(0,0,0);
+    renderer=new THREE.WebGLRenderer({antialias:true});
+    renderer.setSize(innerWidth,innerHeight);
+    document.body.appendChild(renderer.domElement);
+    // Wave plane
+    const geom=new THREE.PlaneGeometry(SIZE,SIZE,RES,RES);
+    geom.rotateX(-Math.PI/2);
+    const mat=new THREE.MeshPhongMaterial({color:0x0088ff,side:THREE.DoubleSide,flatShading:true,shininess:30});
+    plane=new THREE.Mesh(geom,mat);scene.add(plane);
+    // Lights
+    scene.add(new THREE.AmbientLight(0x404040));
+    const l1=new THREE.DirectionalLight(0x00ff88,.8);l1.position.set(10,20,10);scene.add(l1);
+    const l2=new THREE.DirectionalLight(0xff0088,.4);l2.position.set(-10,20,-10);scene.add(l2);
+    // Grid
+    scene.add(new THREE.GridHelper(SIZE,20,0x004444,0x002222));
+    addEventListener('click',e=>{
+        const x=(e.clientX/innerWidth-.5)*SIZE,z=(e.clientY/innerHeight-.5)*SIZE;
+        sources.push({x,z,t:time,amp:3+Math.random()*2,freq:.5+Math.random()*.5});
+        document.getElementById('sources').textContent=sources.length;
+    });
+    addEventListener('wheel',e=>{waveSpeed=Math.max(.1,Math.min(3,waveSpeed+e.deltaY*.001))});
+    addEventListener('keydown',e=>{
+        if(e.code==='Space'){sources=[];document.getElementById('sources').textContent=0}
+        else if(e.code==='Digit1'){mode='ripple';document.getElementById('mode').textContent='Ripple'}
+        else if(e.code==='Digit2'){mode='sine';document.getElementById('mode').textContent='Sine'}
+        else if(e.code==='Digit3'){mode='square';document.getElementById('mode').textContent='Square'}
+        else if(e.code==='Digit4'){mode='spiral';document.getElementById('mode').textContent='Spiral'}
+    });
+    addEventListener('resize',()=>{camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();renderer.setSize(innerWidth,innerHeight)});
+    animate();
+}
+function updateWaves(){
+    const pos=plane.geometry.attributes.position;
+    const cols=new Float32Array(pos.count*3);
+    for(let i=0;i<pos.count;i++){
+        const x=pos.getX(i),z=pos.getZ(i);
+        let y=0;
+        sources.forEach(s=>{
+            const dx=x-s.x,dz=z-s.z,d=Math.sqrt(dx*dx+dz*dz);
+            const age=time-s.t,wave=age*5*waveSpeed-d;
+            if(wave>0){
+                const decay=Math.exp(-age*.3)*Math.exp(-d*.05);
+                if(mode==='ripple')y+=Math.sin(wave*s.freq)*s.amp*decay;
+                else if(mode==='sine')y+=Math.sin(wave*s.freq+x*.2)*s.amp*decay;
+                else if(mode==='square')y+=(Math.sin(wave*s.freq)>0?1:-1)*s.amp*decay;
+                else if(mode==='spiral')y+=Math.sin(wave*s.freq+Math.atan2(dz,dx)*3)*s.amp*decay;
+            }
+        });
+        // Global wave
+        y+=Math.sin(time*2+x*.3)*Math.cos(time*1.5+z*.3)*.5;
+        pos.setY(i,y);
+        // Color based on height
+        const h=.5+y*.05;
+        cols[i*3]=.1;cols[i*3+1]=h;cols[i*3+2]=.8+y*.1;
+    }
+    plane.geometry.setAttribute('color',new THREE.BufferAttribute(cols,3));
+    plane.material.vertexColors=true;
+    pos.needsUpdate=true;
+    plane.geometry.computeVertexNormals();
+}
+function animate(){
+    requestAnimationFrame(animate);
+    time+=.016;
+    updateWaves();
+    camera.position.x=Math.sin(time*.1)*30;
+    camera.position.z=Math.cos(time*.1)*30;
+    camera.lookAt(0,0,0);
+    renderer.render(scene,camera);
+}
+init();
+</script></body></html>

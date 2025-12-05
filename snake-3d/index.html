@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html><head>
+<meta charset="UTF-8"><title>Snake 3D</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<style>
+body{margin:0;overflow:hidden;background:#000}canvas{display:block}
+.hud{position:absolute;top:20px;left:20px;color:#0f8;font-family:'Courier New',monospace;font-size:14px;background:rgba(0,20,40,.8);padding:15px;border-radius:8px;border:2px solid #0f8}
+.score{position:absolute;top:20px;right:20px;color:#0f8;font-family:'Courier New',monospace;font-size:24px;background:rgba(0,20,40,.8);padding:10px 20px;border-radius:8px;border:2px solid #0f8}
+</style></head><body>
+<div class="hud">🐍 <strong>SNAKE 3D</strong><br><small>• WASD/Arrows: Move<br>• Q/E: Up/Down<br>• Space: Restart</small></div>
+<div class="score">Score: <span id="score">0</span></div>
+<script>
+let scene,camera,renderer,snake=[],food,dir={x:1,y:0,z:0},nextDir={x:1,y:0,z:0},score=0,speed=150,gameOver=false;
+const SIZE=10,GRID=20;
+function init(){
+    scene=new THREE.Scene();scene.fog=new THREE.FogExp2(0,0.02);
+    camera=new THREE.PerspectiveCamera(60,innerWidth/innerHeight,.1,1000);
+    camera.position.set(0,30,40);camera.lookAt(0,0,0);
+    renderer=new THREE.WebGLRenderer({antialias:true});
+    renderer.setSize(innerWidth,innerHeight);
+    document.body.appendChild(renderer.domElement);
+    // Grid
+    const grid=new THREE.GridHelper(GRID*2,GRID,0x004400,0x002200);
+    scene.add(grid);
+    // Lights
+    scene.add(new THREE.AmbientLight(0x404040));
+    const light=new THREE.PointLight(0x00ff88,1,100);light.position.set(10,20,10);scene.add(light);
+    // Snake
+    resetGame();
+    addEventListener('keydown',handleKey);
+    addEventListener('resize',()=>{camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();renderer.setSize(innerWidth,innerHeight)});
+    setInterval(gameLoop,speed);
+    animate();
+}
+function createSegment(x,y,z,isHead=false){
+    const g=new THREE.BoxGeometry(.9,.9,.9);
+    const m=new THREE.MeshPhongMaterial({color:isHead?0x00ffaa:0x00ff88,emissive:isHead?0x008855:0x004422});
+    const mesh=new THREE.Mesh(g,m);mesh.position.set(x,y+.5,z);
+    scene.add(mesh);return{mesh,x,y,z};
+}
+function spawnFood(){
+    if(food)scene.remove(food.mesh);
+    let x,y,z,valid;
+    do{x=Math.floor(Math.random()*GRID-GRID/2);y=0;z=Math.floor(Math.random()*GRID-GRID/2);
+    valid=!snake.some(s=>s.x===x&&s.y===y&&s.z===z)}while(!valid);
+    const g=new THREE.SphereGeometry(.5,16,16);
+    const m=new THREE.MeshPhongMaterial({color:0xff0088,emissive:0x880044});
+    const mesh=new THREE.Mesh(g,m);mesh.position.set(x,.5,z);
+    scene.add(mesh);food={mesh,x,y,z};
+}
+function resetGame(){
+    snake.forEach(s=>scene.remove(s.mesh));snake=[];
+    for(let i=0;i<3;i++)snake.push(createSegment(-i,0,0,i===0));
+    dir={x:1,y:0,z:0};nextDir={x:1,y:0,z:0};score=0;gameOver=false;
+    document.getElementById('score').textContent=score;
+    spawnFood();
+}
+function handleKey(e){
+    const k=e.key.toLowerCase();
+    if(k==='w'||k==='arrowup')nextDir={x:0,y:0,z:-1};
+    else if(k==='s'||k==='arrowdown')nextDir={x:0,y:0,z:1};
+    else if(k==='a'||k==='arrowleft')nextDir={x:-1,y:0,z:0};
+    else if(k==='d'||k==='arrowright')nextDir={x:1,y:0,z:0};
+    else if(k==='q')nextDir={x:0,y:1,z:0};
+    else if(k==='e')nextDir={x:0,y:-1,z:0};
+    else if(k===' ')resetGame();
+}
+function gameLoop(){
+    if(gameOver)return;
+    // Prevent reversing
+    if(nextDir.x!==-dir.x||nextDir.y!==-dir.y||nextDir.z!==-dir.z)dir=nextDir;
+    const head=snake[0];
+    const nx=head.x+dir.x,ny=Math.max(0,head.y+dir.y),nz=head.z+dir.z;
+    // Collision check
+    if(Math.abs(nx)>GRID/2||Math.abs(nz)>GRID/2||ny>GRID/2||snake.some(s=>s.x===nx&&s.y===ny&&s.z===nz)){
+        gameOver=true;snake[0].mesh.material.color.setHex(0xff0000);return;
+    }
+    // Move
+    const newHead=createSegment(nx,ny,nz,true);
+    snake[0].mesh.material.color.setHex(0x00ff88);snake[0].mesh.material.emissive.setHex(0x004422);
+    snake.unshift(newHead);
+    // Eat food
+    if(food&&nx===food.x&&ny===food.y&&nz===food.z){
+        score+=10;document.getElementById('score').textContent=score;spawnFood();
+    }else{const tail=snake.pop();scene.remove(tail.mesh)}
+}
+function animate(){
+    requestAnimationFrame(animate);
+    if(food)food.mesh.rotation.y+=.05;
+    camera.position.x+=(snake[0]?.x*0.3-camera.position.x)*.02;
+    camera.position.z+=(snake[0]?.z*0.3+40-camera.position.z)*.02;
+    camera.lookAt(snake[0]?.mesh.position||new THREE.Vector3());
+    renderer.render(scene,camera);
+}
+init();
+</script></body></html>

@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html><head>
+<meta charset="UTF-8"><title>Gravity Wells</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<style>
+body{margin:0;overflow:hidden;background:#000}canvas{display:block}
+.hud{position:absolute;top:20px;left:20px;color:#0f8;font-family:'Courier New',monospace;font-size:14px;background:rgba(0,20,40,.8);padding:15px;border-radius:8px;border:2px solid #0f8}
+</style></head><body>
+<div class="hud">🌌 <strong>GRAVITY WELLS</strong><br><small>• Click: Add gravity well<br>• Right-click: Add particles<br>• Scroll: Adjust gravity<br>• Space: Clear wells</small></div>
+<script>
+let scene,camera,renderer,wells=[],particles=[];const G=0.5;let gMult=1;
+function init(){
+    scene=new THREE.Scene();
+    camera=new THREE.PerspectiveCamera(75,innerWidth/innerHeight,.1,1000);
+    camera.position.z=100;
+    renderer=new THREE.WebGLRenderer({antialias:true});
+    renderer.setSize(innerWidth,innerHeight);
+    document.body.appendChild(renderer.domElement);
+    // Stars
+    const sg=new THREE.BufferGeometry(),sp=new Float32Array(3000);
+    for(let i=0;i<3000;i++)sp[i]=(Math.random()-.5)*500;
+    sg.setAttribute('position',new THREE.BufferAttribute(sp,3));
+    scene.add(new THREE.Points(sg,new THREE.PointsMaterial({size:.5,color:0xffffff})));
+    // Initial particles
+    for(let i=0;i<200;i++)addParticle((Math.random()-.5)*150,(Math.random()-.5)*100);
+    addEventListener('resize',()=>{camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();renderer.setSize(innerWidth,innerHeight)});
+    addEventListener('click',e=>{if(e.button===0)addWell((e.clientX/innerWidth)*200-100,(e.clientY/innerHeight)*-150+75)});
+    addEventListener('contextmenu',e=>{e.preventDefault();for(let i=0;i<20;i++)addParticle((e.clientX/innerWidth)*200-100+Math.random()*10-5,(e.clientY/innerHeight)*-150+75+Math.random()*10-5)});
+    addEventListener('wheel',e=>{gMult=Math.max(.1,Math.min(5,gMult+e.deltaY*.001))});
+    addEventListener('keydown',e=>{if(e.code==='Space'){wells.forEach(w=>scene.remove(w.mesh));wells=[]}});
+    animate();
+}
+function addWell(x,y){
+    const mass=Math.random()*3+1,g=new THREE.SphereGeometry(mass,16,16);
+    const m=new THREE.Mesh(g,new THREE.MeshBasicMaterial({color:new THREE.Color().setHSL(Math.random(),.8,.5),wireframe:true}));
+    m.position.set(x,y,0);wells.push({mesh:m,mass:mass*10});scene.add(m);
+}
+function addParticle(x,y){
+    const g=new THREE.SphereGeometry(.3,8,8);
+    const m=new THREE.Mesh(g,new THREE.MeshBasicMaterial({color:0x0f8}));
+    m.position.set(x,y,0);
+    particles.push({mesh:m,vx:(Math.random()-.5)*.5,vy:(Math.random()-.5)*.5});
+    scene.add(m);
+}
+function animate(){
+    requestAnimationFrame(animate);
+    particles.forEach(p=>{
+        wells.forEach(w=>{
+            const dx=w.mesh.position.x-p.mesh.position.x,dy=w.mesh.position.y-p.mesh.position.y;
+            const d=Math.sqrt(dx*dx+dy*dy)+1;
+            const f=G*gMult*w.mass/(d*d);
+            p.vx+=dx/d*f;p.vy+=dy/d*f;
+        });
+        p.mesh.position.x+=p.vx;p.mesh.position.y+=p.vy;
+        // Wrap around
+        if(p.mesh.position.x>100)p.mesh.position.x=-100;
+        if(p.mesh.position.x<-100)p.mesh.position.x=100;
+        if(p.mesh.position.y>75)p.mesh.position.y=-75;
+        if(p.mesh.position.y<-75)p.mesh.position.y=75;
+        // Trail color
+        const speed=Math.sqrt(p.vx*p.vx+p.vy*p.vy);
+        p.mesh.material.color.setHSL(.3-speed*.1,1,.5);
+    });
+    wells.forEach(w=>w.mesh.rotation.y+=.02);
+    renderer.render(scene,camera);
+}
+init();
+</script></body></html>
