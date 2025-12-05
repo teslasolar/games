@@ -1,0 +1,25 @@
+{
+  "version": "2.0",
+  "autoLoad": true,
+  "categories": ["arcade", "simulation", "visualization", "exploration", "strategy", "racing", "interactive", "puzzle"],
+  "games": [
+    {"id": "cube-spinner", "name": "Cube Spinner", "icon": "🎲", "desc": "Interactive rotating cube with mouse control", "category": "interactive"},
+    {"id": "particle-system", "name": "Particle Storm", "icon": "✨", "desc": "Interactive particle system with physics", "category": "simulation"},
+    {"id": "space-shooter", "name": "Space Shooter", "icon": "🚀", "desc": "Classic space shooter in 3D", "category": "arcade"},
+    {"id": "terrain-explorer", "name": "Terrain Explorer", "icon": "🏔️", "desc": "Navigate procedural 3D terrain", "category": "exploration"},
+    {"id": "neural-network-viz", "name": "Neural Network", "icon": "🧠", "desc": "Visualize AI neural network training", "category": "visualization"},
+    {"id": "block-breaker", "name": "Block Breaker 3D", "icon": "🧱", "desc": "Break blocks in 3D space", "category": "arcade"},
+    {"id": "fractal-explorer", "name": "Fractal Explorer", "icon": "🌀", "desc": "Explore infinite fractal patterns", "category": "visualization"},
+    {"id": "konomi-os", "name": "Konomi OS", "icon": "🖥️", "desc": "Full 3D Operating System with AI", "category": "simulation"},
+    {"id": "maze-runner", "name": "Maze Runner", "icon": "🧭", "desc": "First-person procedural maze exploration", "category": "exploration"},
+    {"id": "tower-defense", "name": "Tower Defense", "icon": "⚔️", "desc": "Strategic 3D tower defense with waves", "category": "strategy"},
+    {"id": "physics-sandbox", "name": "Physics Sandbox", "icon": "🎮", "desc": "Interactive physics playground", "category": "simulation"},
+    {"id": "neon-racer", "name": "Neon Racer", "icon": "🏎️", "desc": "Futuristic high-speed racing game", "category": "racing"},
+    {"id": "music-visualizer", "name": "Music Visualizer", "icon": "🎵", "desc": "Audio-reactive 3D visualization", "category": "visualization"},
+    {"id": "particle-song-generator", "name": "Particle Song Generator", "icon": "🎶", "desc": "Create music through 3D particle interactions", "category": "visualization"},
+    {"id": "city-builder", "name": "City Builder", "icon": "🏙️", "desc": "Build and manage your 3D city", "category": "strategy"},
+    {"id": "gravity-wells", "name": "Gravity Wells", "icon": "🌌", "desc": "Orbital physics simulation", "category": "simulation"},
+    {"id": "snake-3d", "name": "Snake 3D", "icon": "🐍", "desc": "Classic snake in 3D space", "category": "arcade"},
+    {"id": "wave-synthesizer", "name": "Wave Synthesizer", "icon": "🌊", "desc": "Interactive wave interference patterns", "category": "visualization"}
+  ]
+}

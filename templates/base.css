@@ -1,0 +1,10 @@
+/* Konomi Games - Shared Base Styles */
+*{margin:0;padding:0;box-sizing:border-box}
+body{overflow:hidden;background:#000;font-family:'Courier New',monospace}
+canvas{display:block}
+.hud{position:absolute;top:20px;left:20px;color:#0f8;font-size:14px;background:rgba(0,20,40,.8);padding:15px;border-radius:8px;border:2px solid #0f8;max-width:220px}
+.hud h1{font-size:16px;margin-bottom:8px}
+.hud small{font-size:11px;line-height:1.4}
+.stats{position:absolute;bottom:20px;left:20px;color:#0f8;font-size:11px;background:rgba(0,20,40,.8);padding:10px;border-radius:8px;border:1px solid #0f8}
+.btn{background:rgba(0,255,136,.2);border:2px solid #0f8;color:#0f8;padding:8px 16px;border-radius:6px;cursor:pointer;font-family:inherit;transition:all .2s}
+.btn:hover{background:rgba(0,255,136,.4);box-shadow:0 0 15px rgba(0,255,136,.5)}
