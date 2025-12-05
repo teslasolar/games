@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html><head>
+<meta charset="UTF-8"><title>Pong 3D</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<style>
+body{margin:0;overflow:hidden;background:#000}canvas{display:block}
+.score{position:absolute;top:20px;left:50%;transform:translateX(-50%);color:#0f8;font-family:'Courier New',monospace;font-size:36px;background:rgba(0,20,40,.8);padding:10px 30px;border-radius:8px;border:2px solid #0f8}
+.hud{position:absolute;bottom:20px;left:20px;color:#0f8;font-family:'Courier New',monospace;font-size:12px;background:rgba(0,20,40,.8);padding:10px;border-radius:8px;border:1px solid #0f8}
+</style></head><body>
+<div class="score"><span id="p1">0</span> : <span id="p2">0</span></div>
+<div class="hud">🏓 <strong>PONG 3D</strong> | W/S: P1 | ↑/↓: P2 | Space: Serve</div>
+<script>
+let scene,camera,renderer,ball,p1,p2,score={p1:0,p2:0},ballV={x:0,y:0,z:0},serving=true,keys={};
+const W=30,H=15,PADDLE_H=5,BALL_SPEED=.4;
+function init(){
+    scene=new THREE.Scene();
+    camera=new THREE.PerspectiveCamera(50,innerWidth/innerHeight,.1,1000);
+    camera.position.set(0,30,50);camera.lookAt(0,0,0);
+    renderer=new THREE.WebGLRenderer({antialias:true});
+    renderer.setSize(innerWidth,innerHeight);
+    document.body.appendChild(renderer.domElement);
+    // Table
+    const table=new THREE.Mesh(new THREE.BoxGeometry(W*2+4,1,H*2+4),new THREE.MeshPhongMaterial({color:0x004400}));
+    table.position.y=-.5;scene.add(table);
+    // Net
+    const net=new THREE.Mesh(new THREE.BoxGeometry(.2,2,H*2),new THREE.MeshPhongMaterial({color:0xffffff,transparent:true,opacity:.5}));
+    net.position.y=1;scene.add(net);
+    // Lines
+    const lineM=new THREE.MeshBasicMaterial({color:0xffffff});
+    [[-W,0],[W,0]].forEach(([x])=>{
+        const l=new THREE.Mesh(new THREE.BoxGeometry(.2,.1,H*2),lineM);l.position.set(x,0,0);scene.add(l);
+    });
+    [[0,-H],[0,H]].forEach(([_,z])=>{
+        const l=new THREE.Mesh(new THREE.BoxGeometry(W*2,.1,.2),lineM);l.position.set(0,0,z);scene.add(l);
+    });
+    // Paddles
+    const paddleG=new THREE.BoxGeometry(1,1,PADDLE_H);
+    p1=new THREE.Mesh(paddleG,new THREE.MeshPhongMaterial({color:0x00aaff,emissive:0x003355}));
+    p1.position.set(-W+1,.5,0);scene.add(p1);
+    p2=new THREE.Mesh(paddleG,new THREE.MeshPhongMaterial({color:0xff5500,emissive:0x551100}));
+    p2.position.set(W-1,.5,0);scene.add(p2);
+    // Ball
+    ball=new THREE.Mesh(new THREE.SphereGeometry(.5,16,16),new THREE.MeshPhongMaterial({color:0xffff00,emissive:0x444400}));
+    ball.position.y=.5;scene.add(ball);
+    // Lights
+    scene.add(new THREE.AmbientLight(0x333333));
+    const l1=new THREE.PointLight(0x00ff88,1,100);l1.position.set(-20,20,0);scene.add(l1);
+    const l2=new THREE.PointLight(0xff8800,1,100);l2.position.set(20,20,0);scene.add(l2);
+    addEventListener('keydown',e=>{keys[e.key.toLowerCase()]=true;if(e.code==='Space'&&serving)serve()});
+    addEventListener('keyup',e=>keys[e.key.toLowerCase()]=false);
+    addEventListener('resize',()=>{camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();renderer.setSize(innerWidth,innerHeight)});
+    animate();
+}
+function serve(){
+    serving=false;
+    ballV.x=(Math.random()>.5?1:-1)*BALL_SPEED;
+    ballV.z=(Math.random()-.5)*BALL_SPEED;
+    ball.position.set(0,.5,0);
+}
+function reset(scorer){
+    score[scorer]++;
+    document.getElementById(scorer).textContent=score[scorer];
+    ball.position.set(0,.5,0);ballV={x:0,y:0,z:0};
+    serving=true;
+}
+function animate(){
+    requestAnimationFrame(animate);
+    // Paddle movement
+    const pSpeed=.4;
+    if(keys.w&&p1.position.z>-H+PADDLE_H/2)p1.position.z-=pSpeed;
+    if(keys.s&&p1.position.z<H-PADDLE_H/2)p1.position.z+=pSpeed;
+    if(keys.arrowup&&p2.position.z>-H+PADDLE_H/2)p2.position.z-=pSpeed;
+    if(keys.arrowdown&&p2.position.z<H-PADDLE_H/2)p2.position.z+=pSpeed;
+    if(!serving){
+        ball.position.x+=ballV.x;
+        ball.position.z+=ballV.z;
+        // Top/bottom bounce
+        if(Math.abs(ball.position.z)>H-.5){ballV.z*=-1;ball.position.z=Math.sign(ball.position.z)*(H-.5)}
+        // Paddle collision
+        if(ball.position.x<-W+2&&Math.abs(ball.position.z-p1.position.z)<PADDLE_H/2+.5){
+            ballV.x=Math.abs(ballV.x)*1.05;
+            ballV.z+=(ball.position.z-p1.position.z)*.05;
+        }
+        if(ball.position.x>W-2&&Math.abs(ball.position.z-p2.position.z)<PADDLE_H/2+.5){
+            ballV.x=-Math.abs(ballV.x)*1.05;
+            ballV.z+=(ball.position.z-p2.position.z)*.05;
+        }
+        // Score
+        if(ball.position.x<-W-2)reset('p2');
+        if(ball.position.x>W+2)reset('p1');
+    }
+    ball.rotation.x+=ballV.x;ball.rotation.z+=ballV.z;
+    renderer.render(scene,camera);
+}
+init();
+</script></body></html>

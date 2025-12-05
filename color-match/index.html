@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html><head>
+<meta charset="UTF-8"><title>Color Match</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<style>
+body{margin:0;overflow:hidden;background:#000}canvas{display:block}
+.hud{position:absolute;top:20px;left:20px;color:#0f8;font-family:'Courier New',monospace;font-size:14px;background:rgba(0,20,40,.8);padding:15px;border-radius:8px;border:2px solid #0f8}
+.score{position:absolute;top:20px;right:20px;color:#0f8;font-family:'Courier New',monospace;font-size:20px;background:rgba(0,20,40,.8);padding:10px 20px;border-radius:8px;border:2px solid #0f8}
+</style></head><body>
+<div class="hud">🎨 <strong>COLOR MATCH</strong><br><small>• A/D or ←/→: Move<br>• Match falling colors!<br>• Space: Restart</small></div>
+<div class="score">Score: <span id="score">0</span> | Combo: <span id="combo">0</span>x | Lives: <span id="lives">3</span></div>
+<script>
+let scene,camera,renderer,catcher,blocks=[],score=0,combo=0,lives=3,gameOver=false,catcherColor=0;
+const COLORS=[0xff0000,0x00ff00,0x0000ff,0xffff00,0xff00ff,0x00ffff];
+const LANES=5,LANE_W=3;
+function init(){
+    scene=new THREE.Scene();
+    camera=new THREE.PerspectiveCamera(60,innerWidth/innerHeight,.1,1000);
+    camera.position.set(0,15,20);camera.lookAt(0,0,0);
+    renderer=new THREE.WebGLRenderer({antialias:true});
+    renderer.setSize(innerWidth,innerHeight);
+    document.body.appendChild(renderer.domElement);
+    // Floor
+    const floor=new THREE.Mesh(new THREE.PlaneGeometry(LANES*LANE_W+2,30),new THREE.MeshPhongMaterial({color:0x111122}));
+    floor.rotation.x=-Math.PI/2;floor.position.y=-.5;scene.add(floor);
+    // Lane lines
+    for(let i=0;i<=LANES;i++){
+        const line=new THREE.Mesh(new THREE.BoxGeometry(.1,0.1,30),new THREE.MeshBasicMaterial({color:0x333355}));
+        line.position.set(-LANES*LANE_W/2+i*LANE_W,0,0);scene.add(line);
+    }
+    // Catcher
+    const cg=new THREE.BoxGeometry(LANE_W-.2,1,1);
+    catcher=new THREE.Mesh(cg,new THREE.MeshPhongMaterial({color:COLORS[0],emissive:0x222222}));
+    catcher.position.set(0,.5,12);scene.add(catcher);
+    // Lights
+    scene.add(new THREE.AmbientLight(0x444444));
+    const l=new THREE.DirectionalLight(0xffffff,.8);l.position.set(5,10,5);scene.add(l);
+    setInterval(spawnBlock,800);
+    addEventListener('keydown',onKey);
+    addEventListener('resize',()=>{camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();renderer.setSize(innerWidth,innerHeight)});
+    animate();
+}
+function spawnBlock(){
+    if(gameOver)return;
+    const lane=Math.floor(Math.random()*LANES);
+    const colorIdx=Math.floor(Math.random()*COLORS.length);
+    const g=new THREE.BoxGeometry(LANE_W-.4,1,1);
+    const b=new THREE.Mesh(g,new THREE.MeshPhongMaterial({color:COLORS[colorIdx],emissive:0x111111}));
+    b.position.set(-LANES*LANE_W/2+lane*LANE_W+LANE_W/2,.5,-15);
+    b.userData={lane,colorIdx,speed:.08+score*.0005};
+    blocks.push(b);scene.add(b);
+}
+function onKey(e){
+    if(gameOver&&e.code==='Space'){restart();return}
+    const lane=Math.round((catcher.position.x+LANES*LANE_W/2-LANE_W/2)/LANE_W);
+    if(e.key==='a'||e.key==='ArrowLeft'){
+        if(lane>0)catcher.position.x-=LANE_W;
+    }else if(e.key==='d'||e.key==='ArrowRight'){
+        if(lane<LANES-1)catcher.position.x+=LANE_W;
+    }else if(e.key>='1'&&e.key<='6'){
+        catcherColor=parseInt(e.key)-1;
+        catcher.material.color.setHex(COLORS[catcherColor]);
+    }
+}
+function restart(){
+    blocks.forEach(b=>scene.remove(b));blocks=[];
+    score=0;combo=0;lives=3;gameOver=false;catcherColor=0;
+    catcher.material.color.setHex(COLORS[0]);
+    catcher.position.x=0;
+}
+function animate(){
+    requestAnimationFrame(animate);
+    blocks.forEach((b,i)=>{
+        b.position.z+=b.userData.speed;
+        b.rotation.x+=.02;
+        // Check catch
+        if(b.position.z>11&&b.position.z<13){
+            const bLane=b.userData.lane;
+            const cLane=Math.round((catcher.position.x+LANES*LANE_W/2-LANE_W/2)/LANE_W);
+            if(bLane===cLane){
+                if(b.userData.colorIdx===catcherColor){
+                    combo++;score+=10*combo;
+                    // Match - change catcher to next color
+                    catcherColor=(catcherColor+1)%COLORS.length;
+                    catcher.material.color.setHex(COLORS[catcherColor]);
+                }else{
+                    combo=0;lives--;
+                    if(lives<=0)gameOver=true;
+                }
+                scene.remove(b);blocks.splice(i,1);
+            }
+        }
+        // Miss
+        if(b.position.z>20){
+            scene.remove(b);blocks.splice(i,1);
+        }
+    });
+    catcher.scale.y=1+Math.sin(Date.now()*.01)*.1;
+    document.getElementById('score').textContent=score;
+    document.getElementById('combo').textContent=combo;
+    document.getElementById('lives').textContent=Math.max(0,lives);
+    renderer.render(scene,camera);
+}
+init();
+</script></body></html>

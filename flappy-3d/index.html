@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html><head>
+<meta charset="UTF-8"><title>Flappy 3D</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<style>
+body{margin:0;overflow:hidden;background:#000}canvas{display:block}
+.hud{position:absolute;top:20px;left:20px;color:#0f8;font-family:'Courier New',monospace;font-size:14px;background:rgba(0,20,40,.8);padding:15px;border-radius:8px;border:2px solid #0f8}
+.score{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);color:#0f8;font-family:'Courier New',monospace;font-size:48px;pointer-events:none}
+</style></head><body>
+<div class="hud">🐦 <strong>FLAPPY 3D</strong><br><small>• Click/Space: Flap<br>• Avoid pipes!</small></div>
+<div class="score"><span id="score">0</span></div>
+<script>
+let scene,camera,renderer,bird,pipes=[],score=0,vel=0,gameOver=false,started=false;
+const GRAVITY=-.015,FLAP=.35,PIPE_SPEED=.15,GAP=8;
+function init(){
+    scene=new THREE.Scene();scene.background=new THREE.Color(0x87ceeb);
+    camera=new THREE.PerspectiveCamera(60,innerWidth/innerHeight,.1,1000);
+    camera.position.set(-10,0,20);
+    renderer=new THREE.WebGLRenderer({antialias:true});
+    renderer.setSize(innerWidth,innerHeight);
+    document.body.appendChild(renderer.domElement);
+    // Bird
+    const bg=new THREE.Group();
+    const body=new THREE.Mesh(new THREE.SphereGeometry(1,16,16),new THREE.MeshPhongMaterial({color:0xffdd00}));
+    bg.add(body);
+    const wing=new THREE.Mesh(new THREE.BoxGeometry(.2,1.5,.8),new THREE.MeshPhongMaterial({color:0xff8800}));
+    wing.position.set(0,0,.8);bg.add(wing);
+    const eye=new THREE.Mesh(new THREE.SphereGeometry(.2,8,8),new THREE.MeshBasicMaterial({color:0x000000}));
+    eye.position.set(.7,.3,.5);bg.add(eye);
+    const beak=new THREE.Mesh(new THREE.ConeGeometry(.3,.5,8),new THREE.MeshPhongMaterial({color:0xff6600}));
+    beak.rotation.z=-Math.PI/2;beak.position.set(1,0,0);bg.add(beak);
+    bird=bg;scene.add(bird);
+    // Ground
+    const ground=new THREE.Mesh(new THREE.BoxGeometry(200,2,20),new THREE.MeshPhongMaterial({color:0x228822}));
+    ground.position.set(50,-12,0);scene.add(ground);
+    // Sky gradient
+    scene.add(new THREE.AmbientLight(0x666666));
+    const sun=new THREE.DirectionalLight(0xffffee,1);sun.position.set(10,20,10);scene.add(sun);
+    // Initial pipes
+    for(let i=0;i<5;i++)spawnPipe(30+i*15);
+    addEventListener('click',flap);
+    addEventListener('keydown',e=>{if(e.code==='Space')flap()});
+    addEventListener('resize',()=>{camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();renderer.setSize(innerWidth,innerHeight)});
+    animate();
+}
+function spawnPipe(x){
+    const gapY=(Math.random()-.5)*10;
+    const pipeG=new THREE.CylinderGeometry(1.5,1.5,20,16);
+    const pipeM=new THREE.MeshPhongMaterial({color:0x33aa33});
+    const top=new THREE.Mesh(pipeG,pipeM);
+    top.position.set(x,gapY+GAP/2+10,0);
+    const bottom=new THREE.Mesh(pipeG,pipeM);
+    bottom.position.set(x,gapY-GAP/2-10,0);
+    // Caps
+    const capG=new THREE.CylinderGeometry(1.8,1.8,1,16);
+    const topCap=new THREE.Mesh(capG,pipeM);topCap.position.set(x,gapY+GAP/2,0);
+    const botCap=new THREE.Mesh(capG,pipeM);botCap.position.set(x,gapY-GAP/2,0);
+    pipes.push({top,bottom,topCap,botCap,x,gapY,scored:false});
+    scene.add(top,bottom,topCap,botCap);
+}
+function flap(){
+    if(gameOver){restart();return}
+    started=true;vel=FLAP;
+}
+function restart(){
+    pipes.forEach(p=>{scene.remove(p.top,p.bottom,p.topCap,p.botCap)});
+    pipes=[];bird.position.set(0,0,0);vel=0;score=0;gameOver=false;started=false;
+    for(let i=0;i<5;i++)spawnPipe(30+i*15);
+}
+function animate(){
+    requestAnimationFrame(animate);
+    if(started&&!gameOver){
+        vel+=GRAVITY;
+        bird.position.y+=vel;
+        bird.rotation.z=vel*2;
+        // Move pipes
+        pipes.forEach((p,i)=>{
+            p.top.position.x-=PIPE_SPEED;
+            p.bottom.position.x-=PIPE_SPEED;
+            p.topCap.position.x-=PIPE_SPEED;
+            p.botCap.position.x-=PIPE_SPEED;
+            p.x-=PIPE_SPEED;
+            // Score
+            if(!p.scored&&p.x<0){p.scored=true;score++}
+            // Remove & spawn new
+            if(p.x<-30){
+                scene.remove(p.top,p.bottom,p.topCap,p.botCap);
+                pipes.splice(i,1);
+                spawnPipe(pipes.length?pipes[pipes.length-1].x+15:50);
+            }
+            // Collision
+            if(Math.abs(p.x)<2){
+                if(bird.position.y>p.gapY+GAP/2-1||bird.position.y<p.gapY-GAP/2+1){
+                    gameOver=true;
+                }
+            }
+        });
+        // Ground/ceiling
+        if(bird.position.y<-10||bird.position.y>15)gameOver=true;
+    }
+    // Wing flap animation
+    if(bird.children[1])bird.children[1].rotation.x=Math.sin(Date.now()*.02)*.5;
+    camera.position.y+=(bird.position.y*.3-camera.position.y)*.05;
+    document.getElementById('score').textContent=score;
+    renderer.render(scene,camera);
+}
+init();
+</script></body></html>

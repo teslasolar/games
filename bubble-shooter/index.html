@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html><head>
+<meta charset="UTF-8"><title>Bubble Shooter</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<style>
+body{margin:0;overflow:hidden;background:#000}canvas{display:block}
+.hud{position:absolute;top:20px;left:20px;color:#0f8;font-family:'Courier New',monospace;font-size:14px;background:rgba(0,20,40,.8);padding:15px;border-radius:8px;border:2px solid #0f8}
+.score{position:absolute;top:20px;right:20px;color:#0f8;font-family:'Courier New',monospace;font-size:20px;background:rgba(0,20,40,.8);padding:10px 20px;border-radius:8px;border:2px solid #0f8}
+</style></head><body>
+<div class="hud">🫧 <strong>BUBBLE SHOOTER</strong><br><small>• Mouse: Aim<br>• Click: Shoot<br>• Match 3+ colors!</small></div>
+<div class="score">Score: <span id="score">0</span></div>
+<script>
+let scene,camera,renderer,shooter,bullet,bubbles=[],aimLine,score=0,currentColor,shooting=false;
+const COLORS=[0xff0000,0x00ff00,0x0000ff,0xffff00,0xff00ff,0x00ffff];
+const ROWS=8,COLS=10,R=1,OFFSET=R*1.8;
+function init(){
+    scene=new THREE.Scene();scene.background=new THREE.Color(0x111133);
+    camera=new THREE.PerspectiveCamera(50,innerWidth/innerHeight,.1,1000);
+    camera.position.set(0,0,35);
+    renderer=new THREE.WebGLRenderer({antialias:true});
+    renderer.setSize(innerWidth,innerHeight);
+    document.body.appendChild(renderer.domElement);
+    // Walls
+    const wallM=new THREE.MeshPhongMaterial({color:0x333366});
+    const lw=new THREE.Mesh(new THREE.BoxGeometry(1,30,2),wallM);lw.position.set(-COLS*OFFSET/2-1,0,0);scene.add(lw);
+    const rw=new THREE.Mesh(new THREE.BoxGeometry(1,30,2),wallM);rw.position.set(COLS*OFFSET/2+1,0,0);scene.add(rw);
+    // Create bubble grid
+    for(let row=0;row<ROWS;row++){
+        for(let col=0;col<COLS;col++){
+            if(Math.random()>.3)createBubble(col,row);
+        }
+    }
+    // Shooter
+    shooter=new THREE.Mesh(new THREE.ConeGeometry(.8,2,8),new THREE.MeshPhongMaterial({color:0x888888}));
+    shooter.position.set(0,-12,0);scene.add(shooter);
+    // Aim line
+    const lineG=new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(0,0,0),new THREE.Vector3(0,15,0)]);
+    aimLine=new THREE.Line(lineG,new THREE.LineBasicMaterial({color:0xffffff,transparent:true,opacity:.3}));
+    aimLine.position.copy(shooter.position);scene.add(aimLine);
+    // Next bullet
+    loadBullet();
+    // Lights
+    scene.add(new THREE.AmbientLight(0x444444));
+    const l=new THREE.PointLight(0xffffff,1,100);l.position.set(0,10,20);scene.add(l);
+    addEventListener('mousemove',onMouse);
+    addEventListener('click',shoot);
+    addEventListener('resize',()=>{camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();renderer.setSize(innerWidth,innerHeight)});
+    animate();
+}
+function gridToPos(col,row){
+    const x=-COLS*OFFSET/2+col*OFFSET+OFFSET/2+(row%2?OFFSET/2:0);
+    const y=10-row*OFFSET*.9;
+    return{x,y};
+}
+function createBubble(col,row,color){
+    const c=color??COLORS[Math.floor(Math.random()*COLORS.length)];
+    const b=new THREE.Mesh(new THREE.SphereGeometry(R,16,16),new THREE.MeshPhongMaterial({color:c}));
+    const pos=gridToPos(col,row);
+    b.position.set(pos.x,pos.y,0);
+    b.userData={col,row,color:c};
+    bubbles.push(b);scene.add(b);
+    return b;
+}
+function loadBullet(){
+    currentColor=COLORS[Math.floor(Math.random()*COLORS.length)];
+    bullet=new THREE.Mesh(new THREE.SphereGeometry(R,16,16),new THREE.MeshPhongMaterial({color:currentColor}));
+    bullet.position.copy(shooter.position);bullet.position.y+=1.5;
+    scene.add(bullet);
+}
+function onMouse(e){
+    const x=(e.clientX/innerWidth)*2-1;
+    const y=-(e.clientY/innerHeight)*2+1;
+    const angle=Math.atan2(x,y);
+    shooter.rotation.z=-angle;
+    aimLine.rotation.z=-angle;
+}
+function shoot(){
+    if(shooting)return;
+    shooting=true;
+    const dir=new THREE.Vector3(0,1,0).applyAxisAngle(new THREE.Vector3(0,0,1),-shooter.rotation.z);
+    bullet.userData.vel=dir.multiplyScalar(.5);
+}
+function checkMatch(b){
+    const matches=[b];const checked=new Set([`${b.userData.col},${b.userData.row}`]);
+    const queue=[b];
+    while(queue.length){
+        const curr=queue.shift();
+        const neighbors=getNeighbors(curr);
+        neighbors.forEach(n=>{
+            const key=`${n.userData.col},${n.userData.row}`;
+            if(!checked.has(key)&&n.userData.color===b.userData.color){
+                checked.add(key);matches.push(n);queue.push(n);
+            }
+        });
+    }
+    if(matches.length>=3){
+        matches.forEach(m=>{scene.remove(m);bubbles=bubbles.filter(x=>x!==m)});
+        score+=matches.length*10;
+        document.getElementById('score').textContent=score;
+    }
+}
+function getNeighbors(b){
+    return bubbles.filter(o=>{
+        const dx=Math.abs(o.position.x-b.position.x);
+        const dy=Math.abs(o.position.y-b.position.y);
+        return dx<OFFSET*1.2&&dy<OFFSET*1.2&&o!==b;
+    });
+}
+function snapToGrid(b){
+    let minDist=Infinity,bestCol=0,bestRow=0;
+    for(let row=0;row<15;row++){
+        for(let col=0;col<COLS;col++){
+            const pos=gridToPos(col,row);
+            const d=Math.sqrt((b.position.x-pos.x)**2+(b.position.y-pos.y)**2);
+            if(d<minDist&&!bubbles.some(x=>x.userData.col===col&&x.userData.row===row)){
+                minDist=d;bestCol=col;bestRow=row;
+            }
+        }
+    }
+    const pos=gridToPos(bestCol,bestRow);
+    b.position.set(pos.x,pos.y,0);
+    b.userData={col:bestCol,row:bestRow,color:currentColor};
+    bubbles.push(b);
+    checkMatch(b);
+    shooting=false;
+    loadBullet();
+}
+function animate(){
+    requestAnimationFrame(animate);
+    if(shooting&&bullet.userData.vel){
+        bullet.position.add(bullet.userData.vel);
+        // Wall bounce
+        if(Math.abs(bullet.position.x)>COLS*OFFSET/2)bullet.userData.vel.x*=-1;
+        // Top or collision
+        if(bullet.position.y>10){snapToGrid(bullet);return}
+        bubbles.forEach(b=>{
+            if(bullet.position.distanceTo(b.position)<R*2){
+                snapToGrid(bullet);
+            }
+        });
+    }
+    bubbles.forEach(b=>b.rotation.y+=.01);
+    renderer.render(scene,camera);
+}
+init();
+</script></body></html>

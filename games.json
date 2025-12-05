@@ -20,6 +20,11 @@
     {"id": "city-builder", "name": "City Builder", "icon": "🏙️", "desc": "Build and manage your 3D city", "category": "strategy"},
     {"id": "gravity-wells", "name": "Gravity Wells", "icon": "🌌", "desc": "Orbital physics simulation", "category": "simulation"},
     {"id": "snake-3d", "name": "Snake 3D", "icon": "🐍", "desc": "Classic snake in 3D space", "category": "arcade"},
-    {"id": "wave-synthesizer", "name": "Wave Synthesizer", "icon": "🌊", "desc": "Interactive wave interference patterns", "category": "visualization"}
+    {"id": "wave-synthesizer", "name": "Wave Synthesizer", "icon": "🌊", "desc": "Interactive wave interference patterns", "category": "visualization"},
+    {"id": "asteroid-field", "name": "Asteroid Field", "icon": "☄️", "desc": "Dodge and destroy asteroids in 3D", "category": "arcade"},
+    {"id": "color-match", "name": "Color Match", "icon": "🎨", "desc": "Match falling colors in lanes", "category": "puzzle"},
+    {"id": "flappy-3d", "name": "Flappy 3D", "icon": "🐦", "desc": "Classic flappy bird in 3D", "category": "arcade"},
+    {"id": "pong-3d", "name": "Pong 3D", "icon": "🏓", "desc": "Two-player 3D pong game", "category": "arcade"},
+    {"id": "bubble-shooter", "name": "Bubble Shooter", "icon": "🫧", "desc": "Match 3+ bubbles to pop them", "category": "puzzle"}
   ]
 }
