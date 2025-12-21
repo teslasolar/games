@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>HTML Hero - Code Your Way to Glory</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="header">
+        <div class="logo">
+            <span class="hero-icon">⚡</span>
+            <span class="title">HTML HERO</span>
+        </div>
+        <div class="stats">
+            <div class="stat">
+                <span class="label">Level</span>
+                <span class="value" id="level">1</span>
+            </div>
+            <div class="stat">
+                <span class="label">XP</span>
+                <div class="xp-bar"><div class="xp-fill" id="xp-fill"></div></div>
+            </div>
+            <div class="stat">
+                <span class="label">Streak</span>
+                <span class="value fire" id="streak">0🔥</span>
+            </div>
+        </div>
+    </div>
+
+    <div class="main-container">
+        <div class="challenge-panel">
+            <div class="challenge-header">
+                <span class="challenge-num" id="challenge-num">Challenge 1</span>
+                <span class="challenge-diff" id="challenge-diff">NEWBIE</span>
+            </div>
+            <h2 class="challenge-title" id="challenge-title">Loading...</h2>
+            <p class="challenge-desc" id="challenge-desc"></p>
+            <div class="challenge-hint" id="challenge-hint"></div>
+        </div>
+
+        <div class="workspace">
+            <div class="editor-panel">
+                <div class="panel-header">
+                    <span>📝 editor.html</span>
+                    <button class="run-btn" id="run-btn">▶ RUN</button>
+                </div>
+                <div class="editor-wrap">
+                    <div class="line-numbers" id="line-numbers"></div>
+                    <textarea id="editor" spellcheck="false"></textarea>
+                </div>
+            </div>
+
+            <div class="preview-panel">
+                <div class="panel-header">
+                    <span>👁 Preview</span>
+                    <span class="status" id="status">Ready</span>
+                </div>
+                <iframe id="preview" sandbox="allow-scripts"></iframe>
+            </div>
+        </div>
+
+        <div class="controls">
+            <button class="btn hint-btn" id="hint-btn">💡 Hint</button>
+            <button class="btn check-btn" id="check-btn">✓ Check Solution</button>
+            <button class="btn skip-btn" id="skip-btn">→ Skip</button>
+        </div>
+    </div>
+
+    <div class="modal" id="modal">
+        <div class="modal-content" id="modal-content"></div>
+    </div>
+
+    <div class="toast" id="toast"></div>
+
+    <script src="challenges.js"></script>
+    <script src="editor.js"></script>
+    <script src="preview.js"></script>
+    <script src="game.js"></script>
+</body>
+</html>
