@@ -21,6 +21,7 @@
     {"id": "gravity-wells", "name": "Gravity Wells", "icon": "🌌", "desc": "Orbital physics simulation", "category": "simulation"},
     {"id": "snake-3d", "name": "Snake 3D", "icon": "🐍", "desc": "Classic snake in 3D space", "category": "arcade"},
     {"id": "wave-synthesizer", "name": "Wave Synthesizer", "icon": "🌊", "desc": "Interactive wave interference patterns", "category": "visualization"},
-    {"id": "ai-adventure", "name": "AI Adventure", "icon": "📖", "desc": "Choose-your-own-adventure that teaches AI concepts", "category": "puzzle"}
+    {"id": "ai-adventure", "name": "AI Adventure", "icon": "📖", "desc": "Choose-your-own-adventure that teaches AI concepts", "category": "puzzle"},
+    {"id": "git-adventure", "name": "GitPhuckt", "icon": "🐙", "desc": "Learn GitHub Pages by building real working apps", "category": "puzzle"}
   ]
 }
