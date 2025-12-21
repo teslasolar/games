@@ -23,6 +23,7 @@
     {"id": "wave-synthesizer", "name": "Wave Synthesizer", "icon": "🌊", "desc": "Interactive wave interference patterns", "category": "visualization"},
     {"id": "ai-adventure", "name": "AI Adventure", "icon": "📖", "desc": "Choose-your-own-adventure that teaches AI concepts", "category": "puzzle"},
     {"id": "git-adventure", "name": "GitPhuckt", "icon": "🐙", "desc": "Learn GitHub Pages by building real working apps", "category": "puzzle"},
-    {"id": "html-hero", "name": "HTML Hero", "icon": "⚡", "desc": "Learn HTML through coding challenges with live preview", "category": "puzzle"}
+    {"id": "html-hero", "name": "HTML Hero", "icon": "⚡", "desc": "Learn HTML through coding challenges with live preview", "category": "puzzle"},
+    {"id": "bowling-3d", "name": "Bowling 3D", "icon": "🎳", "desc": "3D bowling with realistic pin physics", "category": "arcade"}
   ]
 }

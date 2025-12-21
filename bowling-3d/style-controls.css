@@ -1,0 +1,100 @@
+/* Controls and popup styles */
+.controls-hint {
+    position: fixed;
+    bottom: 30px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: rgba(0, 0, 0, 0.7);
+    padding: 12px 25px;
+    border-radius: 25px;
+    color: #fff;
+    font-size: 16px;
+    z-index: 10;
+    transition: opacity 0.3s;
+}
+
+.controls-hint.hidden { opacity: 0; }
+
+.power-meter {
+    position: fixed;
+    right: 30px;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 30px;
+    height: 200px;
+    background: rgba(0, 0, 0, 0.7);
+    border-radius: 15px;
+    border: 2px solid #444;
+    overflow: hidden;
+    display: none;
+    z-index: 10;
+}
+
+.power-meter.visible { display: block; }
+
+.power-fill {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 0%;
+    background: linear-gradient(to top, #4ade80, #feca57, #ff6b6b);
+    transition: height 0.05s;
+}
+
+.power-label {
+    position: absolute;
+    bottom: -30px;
+    left: 50%;
+    transform: translateX(-50%);
+    color: #888;
+    font-size: 10px;
+    white-space: nowrap;
+}
+
+.result-popup {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%) scale(0);
+    z-index: 50;
+    pointer-events: none;
+    transition: transform 0.3s ease;
+}
+
+.result-popup.visible {
+    transform: translate(-50%, -50%) scale(1);
+}
+
+.result-text {
+    font-size: 64px;
+    font-weight: bold;
+    color: #feca57;
+    text-shadow:
+        0 0 20px #feca57,
+        0 0 40px #ff6b6b,
+        3px 3px 0 #000;
+    animation: pulse 0.5s ease infinite alternate;
+}
+
+.result-text.strike {
+    color: #ff6b6b;
+    text-shadow: 0 0 30px #ff6b6b, 0 0 60px #ff6b6b;
+}
+
+.result-text.spare {
+    color: #4ade80;
+    text-shadow: 0 0 30px #4ade80;
+}
+
+@keyframes pulse {
+    from { transform: scale(1); }
+    to { transform: scale(1.1); }
+}
+
+/* Aim line */
+.aim-line {
+    position: fixed;
+    pointer-events: none;
+    z-index: 5;
+}

@@ -1,0 +1,132 @@
+/* Base and HUD styles */
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+body {
+    background: #1a1a2e;
+    overflow: hidden;
+    font-family: 'Segoe UI', system-ui, sans-serif;
+}
+
+#canvas {
+    display: block;
+}
+
+.hud {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    padding: 15px 20px;
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    pointer-events: none;
+    z-index: 10;
+}
+
+.scoreboard {
+    display: flex;
+    gap: 3px;
+    background: rgba(0, 0, 0, 0.7);
+    padding: 10px;
+    border-radius: 10px;
+    border: 2px solid #ff6b6b;
+}
+
+.frame-box {
+    background: #2a2a4a;
+    border-radius: 5px;
+    min-width: 50px;
+    text-align: center;
+}
+
+.frame-box.active {
+    border: 2px solid #feca57;
+}
+
+.frame-num {
+    font-size: 10px;
+    color: #888;
+    padding: 3px;
+    border-bottom: 1px solid #444;
+}
+
+.frame-rolls {
+    display: flex;
+    font-size: 14px;
+    color: #fff;
+    border-bottom: 1px solid #444;
+}
+
+.frame-rolls span {
+    flex: 1;
+    padding: 5px;
+    min-width: 20px;
+}
+
+.frame-rolls span:first-child {
+    border-right: 1px solid #444;
+}
+
+.frame-score {
+    font-size: 16px;
+    font-weight: bold;
+    color: #feca57;
+    padding: 5px;
+}
+
+.frame-info {
+    background: rgba(0, 0, 0, 0.7);
+    padding: 10px 20px;
+    border-radius: 10px;
+    color: #fff;
+    display: flex;
+    gap: 20px;
+}
+
+.frame-info strong {
+    color: #feca57;
+}
+
+.game-over {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.9);
+    display: none;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    z-index: 100;
+}
+
+.game-over.visible { display: flex; }
+
+.game-over h1 {
+    font-size: 48px;
+    color: #ff6b6b;
+    margin-bottom: 20px;
+}
+
+.final-score {
+    font-size: 32px;
+    color: #feca57;
+    margin-bottom: 30px;
+}
+
+.game-over button {
+    background: linear-gradient(90deg, #ff6b6b, #feca57);
+    border: none;
+    padding: 15px 40px;
+    font-size: 18px;
+    font-weight: bold;
+    border-radius: 10px;
+    cursor: pointer;
+    transition: transform 0.2s;
+}
+
+.game-over button:hover {
+    transform: scale(1.1);
+}
