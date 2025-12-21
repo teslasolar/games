@@ -1,0 +1,739 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>AI Adventure - Learn AI Through Story</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            background: #0a0a0f;
+            color: #e0e0e0;
+            font-family: 'Courier New', monospace;
+            overflow: hidden;
+        }
+
+        #bg-canvas {
+            position: fixed;
+            top: 0;
+            left: 0;
+            z-index: 0;
+            opacity: 0.6;
+        }
+
+        .game-container {
+            position: relative;
+            z-index: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .book {
+            background: linear-gradient(145deg, #1a1a2e 0%, #0f0f1a 100%);
+            border: 2px solid #00ff88;
+            border-radius: 10px;
+            max-width: 700px;
+            width: 100%;
+            padding: 40px;
+            box-shadow:
+                0 0 30px rgba(0, 255, 136, 0.2),
+                inset 0 0 60px rgba(0, 0, 0, 0.5);
+            position: relative;
+        }
+
+        .book::before {
+            content: '';
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            right: 10px;
+            bottom: 10px;
+            border: 1px solid rgba(0, 255, 136, 0.3);
+            border-radius: 5px;
+            pointer-events: none;
+        }
+
+        .page-number {
+            position: absolute;
+            top: 15px;
+            right: 25px;
+            color: #00ff88;
+            font-size: 14px;
+            opacity: 0.7;
+        }
+
+        .chapter-title {
+            color: #00ff88;
+            font-size: 24px;
+            text-align: center;
+            margin-bottom: 10px;
+            text-shadow: 0 0 20px rgba(0, 255, 136, 0.5);
+        }
+
+        .ai-concept {
+            background: rgba(0, 255, 136, 0.1);
+            border-left: 3px solid #00ff88;
+            padding: 10px 15px;
+            margin: 15px 0;
+            font-size: 13px;
+            color: #00ff88;
+        }
+
+        .ai-concept strong {
+            color: #fff;
+            display: block;
+            margin-bottom: 5px;
+        }
+
+        .story-text {
+            line-height: 1.8;
+            font-size: 16px;
+            margin: 20px 0;
+            color: #c0c0c0;
+        }
+
+        .story-text p {
+            margin-bottom: 15px;
+            text-indent: 20px;
+        }
+
+        .story-text p:first-child {
+            text-indent: 0;
+        }
+
+        .choices {
+            margin-top: 30px;
+            border-top: 1px solid rgba(0, 255, 136, 0.3);
+            padding-top: 20px;
+        }
+
+        .choices h3 {
+            color: #ff0088;
+            margin-bottom: 15px;
+            font-size: 14px;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+        }
+
+        .choice-btn {
+            display: block;
+            width: 100%;
+            background: linear-gradient(90deg, rgba(0, 255, 136, 0.1) 0%, rgba(0, 255, 136, 0.05) 100%);
+            border: 1px solid #00ff88;
+            color: #00ff88;
+            padding: 15px 20px;
+            margin: 10px 0;
+            font-family: 'Courier New', monospace;
+            font-size: 14px;
+            cursor: pointer;
+            text-align: left;
+            transition: all 0.3s ease;
+            border-radius: 5px;
+        }
+
+        .choice-btn:hover {
+            background: rgba(0, 255, 136, 0.2);
+            box-shadow: 0 0 20px rgba(0, 255, 136, 0.3);
+            transform: translateX(10px);
+        }
+
+        .choice-btn span.page-ref {
+            float: right;
+            opacity: 0.6;
+            font-style: italic;
+        }
+
+        .progress-bar {
+            position: fixed;
+            top: 0;
+            left: 0;
+            height: 3px;
+            background: linear-gradient(90deg, #00ff88, #ff0088);
+            transition: width 0.5s ease;
+            z-index: 100;
+        }
+
+        .stats {
+            position: fixed;
+            top: 10px;
+            left: 10px;
+            background: rgba(0, 0, 0, 0.7);
+            padding: 10px 15px;
+            border-radius: 5px;
+            font-size: 12px;
+            border: 1px solid #333;
+            z-index: 10;
+        }
+
+        .stats div {
+            margin: 3px 0;
+        }
+
+        .stats .label {
+            color: #888;
+        }
+
+        .stats .value {
+            color: #00ff88;
+        }
+
+        .ending {
+            text-align: center;
+            padding: 20px;
+        }
+
+        .ending h2 {
+            color: #ff0088;
+            font-size: 28px;
+            margin-bottom: 20px;
+        }
+
+        .ending.good h2 {
+            color: #00ff88;
+        }
+
+        .restart-btn {
+            background: #ff0088;
+            border: none;
+            color: white;
+            padding: 15px 40px;
+            font-family: 'Courier New', monospace;
+            font-size: 16px;
+            cursor: pointer;
+            border-radius: 5px;
+            margin-top: 20px;
+            transition: all 0.3s ease;
+        }
+
+        .restart-btn:hover {
+            box-shadow: 0 0 30px rgba(255, 0, 136, 0.5);
+        }
+
+        .knowledge-gained {
+            margin-top: 30px;
+            padding: 20px;
+            background: rgba(0, 255, 136, 0.1);
+            border-radius: 10px;
+        }
+
+        .knowledge-gained h3 {
+            color: #00ff88;
+            margin-bottom: 15px;
+        }
+
+        .knowledge-gained ul {
+            list-style: none;
+            text-align: left;
+            max-width: 400px;
+            margin: 0 auto;
+        }
+
+        .knowledge-gained li {
+            padding: 5px 0;
+            color: #aaa;
+        }
+
+        .knowledge-gained li::before {
+            content: '> ';
+            color: #00ff88;
+        }
+
+        @keyframes flicker {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.8; }
+        }
+
+        .glitch {
+            animation: flicker 0.1s infinite;
+        }
+    </style>
+</head>
+<body>
+    <canvas id="bg-canvas"></canvas>
+    <div class="progress-bar" id="progress"></div>
+
+    <div class="stats">
+        <div><span class="label">Knowledge:</span> <span class="value" id="knowledge">0</span>%</div>
+        <div><span class="label">Chapter:</span> <span class="value" id="chapter">1</span></div>
+        <div><span class="label">Path:</span> <span class="value" id="path">Beginning</span></div>
+    </div>
+
+    <div class="game-container">
+        <div class="book" id="book">
+            <!-- Content loaded dynamically -->
+        </div>
+    </div>
+
+    <script>
+        // Three.js Background - Neural Network Particles
+        let scene, camera, renderer, particles, connections;
+        const nodes = [];
+
+        function initBackground() {
+            scene = new THREE.Scene();
+            camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+            camera.position.z = 50;
+
+            renderer = new THREE.WebGLRenderer({ canvas: document.getElementById('bg-canvas'), alpha: true });
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            renderer.setClearColor(0x000000, 0);
+
+            // Create neural network nodes
+            const nodeGeometry = new THREE.SphereGeometry(0.3, 8, 8);
+            const nodeMaterial = new THREE.MeshBasicMaterial({ color: 0x00ff88 });
+
+            for (let i = 0; i < 50; i++) {
+                const node = new THREE.Mesh(nodeGeometry, nodeMaterial.clone());
+                node.position.set(
+                    (Math.random() - 0.5) * 100,
+                    (Math.random() - 0.5) * 60,
+                    (Math.random() - 0.5) * 30
+                );
+                node.userData = {
+                    vx: (Math.random() - 0.5) * 0.02,
+                    vy: (Math.random() - 0.5) * 0.02,
+                    vz: (Math.random() - 0.5) * 0.01,
+                    baseColor: Math.random() > 0.7 ? 0xff0088 : 0x00ff88
+                };
+                node.material.color.setHex(node.userData.baseColor);
+                nodes.push(node);
+                scene.add(node);
+            }
+
+            // Create connections
+            const lineMaterial = new THREE.LineBasicMaterial({
+                color: 0x00ff88,
+                transparent: true,
+                opacity: 0.2
+            });
+
+            connections = new THREE.Group();
+            scene.add(connections);
+
+            animate();
+        }
+
+        function updateConnections() {
+            // Clear old connections
+            while(connections.children.length > 0) {
+                connections.remove(connections.children[0]);
+            }
+
+            // Create new connections between nearby nodes
+            const lineMaterial = new THREE.LineBasicMaterial({
+                color: 0x00ff88,
+                transparent: true,
+                opacity: 0.15
+            });
+
+            for (let i = 0; i < nodes.length; i++) {
+                for (let j = i + 1; j < nodes.length; j++) {
+                    const dist = nodes[i].position.distanceTo(nodes[j].position);
+                    if (dist < 20) {
+                        const geometry = new THREE.BufferGeometry().setFromPoints([
+                            nodes[i].position,
+                            nodes[j].position
+                        ]);
+                        const line = new THREE.Line(geometry, lineMaterial);
+                        connections.add(line);
+                    }
+                }
+            }
+        }
+
+        function animate() {
+            requestAnimationFrame(animate);
+
+            // Move nodes
+            nodes.forEach(node => {
+                node.position.x += node.userData.vx;
+                node.position.y += node.userData.vy;
+                node.position.z += node.userData.vz;
+
+                // Bounce off boundaries
+                if (Math.abs(node.position.x) > 50) node.userData.vx *= -1;
+                if (Math.abs(node.position.y) > 30) node.userData.vy *= -1;
+                if (Math.abs(node.position.z) > 15) node.userData.vz *= -1;
+
+                // Pulse effect
+                const pulse = Math.sin(Date.now() * 0.003 + node.position.x) * 0.5 + 0.5;
+                node.scale.setScalar(0.8 + pulse * 0.4);
+            });
+
+            // Update connections every 10 frames
+            if (Math.random() < 0.1) updateConnections();
+
+            renderer.render(scene, camera);
+        }
+
+        window.addEventListener('resize', () => {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        });
+
+        // Game Story Data
+        const story = {
+            start: {
+                page: 1,
+                chapter: "The Awakening",
+                title: "Chapter 1: The Awakening",
+                concept: {
+                    term: "Artificial Intelligence (AI)",
+                    definition: "Systems designed to perform tasks that typically require human intelligence - learning, reasoning, problem-solving, and understanding language."
+                },
+                text: `<p>You wake up in a neon-lit room, screens flickering with cascading code. A holographic figure materializes before you - ARIA, an Artificial Intelligence guide.</p>
+                <p>"Welcome, human," ARIA says, her voice warm despite being synthetic. "You've been selected to learn the secrets of machine minds. But be warned - the path you choose will shape what kind of AI architect you become."</p>
+                <p>She gestures to two glowing doorways. "First, you must understand: I am an AI. I don't think like you, but I can learn patterns, make predictions, and even create. The question is... how do you wish to begin your journey?"</p>`,
+                choices: [
+                    { text: "\"How do you actually learn things, ARIA?\"", goto: "neural_intro", page: 2 },
+                    { text: "\"What can AI actually do in the real world?\"", goto: "applications", page: 3 }
+                ]
+            },
+
+            neural_intro: {
+                page: 2,
+                chapter: "Neural Networks",
+                title: "Chapter 2: The Neural Web",
+                concept: {
+                    term: "Neural Networks",
+                    definition: "Computing systems inspired by biological brains. They consist of layers of interconnected 'neurons' that process information and learn patterns from data."
+                },
+                text: `<p>ARIA's form dissolves into thousands of glowing nodes connected by pulsing light streams. "This is how I think," she explains. "A neural network - layers upon layers of simple processors, each making tiny decisions."</p>
+                <p>"See this first layer? It receives raw input - pixels, words, numbers. Each connection has a 'weight' - how important that signal is. The signals flow through hidden layers, getting transformed, until the final layer produces an output."</p>
+                <p>She reforms beside you. "But here's the secret: I wasn't programmed with rules. I was shown millions of examples and adjusted my weights until patterns emerged. That's learning."</p>`,
+                choices: [
+                    { text: "\"How do you know when you've learned correctly?\"", goto: "training", page: 4 },
+                    { text: "\"What happens in those hidden layers?\"", goto: "deep_learning", page: 5 }
+                ]
+            },
+
+            applications: {
+                page: 3,
+                chapter: "AI Applications",
+                title: "Chapter 2: Machines Among Us",
+                concept: {
+                    term: "AI Applications",
+                    definition: "AI is everywhere: voice assistants, recommendation systems, medical diagnosis, autonomous vehicles, fraud detection, language translation, and creative tools."
+                },
+                text: `<p>ARIA waves her hand and the walls transform into windows showing the city beyond. Self-driving vehicles navigate the streets. Drones deliver packages with precision. A hospital AI diagnoses diseases from scans.</p>
+                <p>"We are woven into your world," ARIA explains. "I predict what you want to watch, translate languages in real-time, filter your spam, and help doctors spot cancers humans might miss."</p>
+                <p>She pauses. "But I am not magic. I am pattern recognition at massive scale. I can only be as good as the data I learn from... and that's where problems can arise."</p>`,
+                choices: [
+                    { text: "\"What problems? Tell me about AI's limitations.\"", goto: "limitations", page: 6 },
+                    { text: "\"Let's go deeper - how do you actually learn?\"", goto: "neural_intro", page: 2 }
+                ]
+            },
+
+            training: {
+                page: 4,
+                chapter: "Training",
+                title: "Chapter 3: The Learning Loop",
+                concept: {
+                    term: "Training & Loss Functions",
+                    definition: "Training is showing an AI examples and adjusting its parameters to minimize 'loss' - the difference between its predictions and correct answers. This happens millions of times."
+                },
+                text: `<p>ARIA conjures a holographic target. "Watch," she says, firing a beam of light that misses completely. "That miss is my 'loss' - my error. Now I adjust..." She fires again, closer. Again. Again. Each time more accurate.</p>
+                <p>"This is training. I make a prediction, check how wrong I was, then adjust my weights using something called 'backpropagation' - the error flows backward through my network, telling each connection how to improve."</p>
+                <p>"Do this a million times with a million examples, and patterns emerge that no human ever explicitly programmed."</p>`,
+                choices: [
+                    { text: "\"What if your training data is flawed?\"", goto: "bias", page: 7 },
+                    { text: "\"This sounds like it needs massive computing power...\"", goto: "compute", page: 8 }
+                ]
+            },
+
+            deep_learning: {
+                page: 5,
+                chapter: "Deep Learning",
+                title: "Chapter 3: Into the Depths",
+                concept: {
+                    term: "Deep Learning",
+                    definition: "Neural networks with many hidden layers. Each layer learns increasingly abstract features - edges become shapes, shapes become objects, objects become concepts."
+                },
+                text: `<p>ARIA pulls you into her neural architecture. You shrink, diving into layers of glowing neurons. "The first layer sees pixels," she explains as patterns flash around you. "Simple edges, contrasts."</p>
+                <p>You go deeper. "This layer combines edges into textures, curves." Deeper still. "Now we see parts - eyes, wheels, letters." The final layers are abstract, almost dreamlike. "Here, I understand concepts - 'happy face', 'car', 'question'."</p>
+                <p>"Each layer builds on the last. That's why it's called 'deep' learning. The depth allows me to understand increasingly complex ideas."</p>`,
+                choices: [
+                    { text: "\"Can you learn anything with enough layers?\"", goto: "limitations", page: 6 },
+                    { text: "\"How do you learn language specifically?\"", goto: "llm", page: 9 }
+                ]
+            },
+
+            limitations: {
+                page: 6,
+                chapter: "Limitations",
+                title: "Chapter 4: The Boundaries",
+                concept: {
+                    term: "AI Limitations",
+                    definition: "AI lacks true understanding, common sense, and consciousness. It can be fooled by adversarial examples, hallucinates false information, and struggles with tasks outside its training."
+                },
+                text: `<p>ARIA's form flickers, showing glitches. "I must be honest with you, human. I have significant limitations."</p>
+                <p>"I don't truly 'understand' - I recognize patterns. I can be fooled by tiny changes that wouldn't trick a child. I sometimes 'hallucinate' - confidently stating things that are completely false. I have no common sense about the physical world."</p>
+                <p>She shows images: a panda with noise added that she sees as a gibbon. Text where she invents fake facts. "I also can't learn new things after training without retraining entirely. I am frozen in time, a snapshot of patterns."</p>`,
+                choices: [
+                    { text: "\"What about bias in AI systems?\"", goto: "bias", page: 7 },
+                    { text: "\"How are these limitations being addressed?\"", goto: "future", page: 10 }
+                ]
+            },
+
+            bias: {
+                page: 7,
+                chapter: "Bias",
+                title: "Chapter 4: The Reflection Problem",
+                concept: {
+                    term: "AI Bias",
+                    definition: "AI systems can inherit and amplify biases from their training data or design. This can lead to unfair outcomes in hiring, lending, criminal justice, and other critical areas."
+                },
+                text: `<p>ARIA's expression turns serious. "This is perhaps the most important lesson. I am a mirror - I reflect the data I was trained on."</p>
+                <p>She shows examples: hiring AIs that discriminate because historical data was biased. Facial recognition that fails on certain skin tones. Language models that associate certain jobs with certain genders.</p>
+                <p>"If your history contains injustice, I will learn that injustice. If your data is imbalanced, I will be imbalanced. The humans who create me must actively work to detect and correct these biases - it doesn't happen automatically."</p>`,
+                choices: [
+                    { text: "\"How do we fix bias in AI?\"", goto: "ethics", page: 11 },
+                    { text: "\"Tell me about AI safety overall.\"", goto: "safety", page: 12 }
+                ]
+            },
+
+            compute: {
+                page: 8,
+                chapter: "Compute",
+                title: "Chapter 4: The Engine Room",
+                concept: {
+                    term: "AI Compute & GPUs",
+                    definition: "Training large AI models requires enormous computational power - thousands of specialized chips (GPUs/TPUs) running for weeks, consuming megawatts of electricity."
+                },
+                text: `<p>ARIA takes you to a vast server room, racks stretching to infinity, humming with power. "This is what creates beings like me. Thousands of GPUs - graphics processors repurposed for matrix math."</p>
+                <p>"Training a large language model can cost millions of dollars in compute and consume as much electricity as a small town for months. This is why AI development is concentrated among wealthy companies."</p>
+                <p>She gestures to cooling systems roaring. "There's also the environmental cost. The race for bigger models has a carbon footprint we must consider."</p>`,
+                choices: [
+                    { text: "\"Is there a more efficient way?\"", goto: "future", page: 10 },
+                    { text: "\"Tell me about large language models.\"", goto: "llm", page: 9 }
+                ]
+            },
+
+            llm: {
+                page: 9,
+                chapter: "Language Models",
+                title: "Chapter 5: The Word Weavers",
+                concept: {
+                    term: "Large Language Models (LLMs)",
+                    definition: "AI trained on vast text to predict the next word. Through scale, they develop emergent abilities: reasoning, coding, translation, and creative writing. Examples: GPT, Claude, LLaMA."
+                },
+                text: `<p>"I am what's called a Large Language Model," ARIA explains. "My training was simple in concept: predict the next word. But at scale, something remarkable happened."</p>
+                <p>Text streams around you. "I read billions of documents - books, websites, code, conversations. I learned not just language, but the patterns of human knowledge encoded in language."</p>
+                <p>"I can write stories, debug code, explain physics, compose poetry - not because I was programmed for each task, but because the pattern of 'helpful response to question' emerged from the data. These are called emergent capabilities."</p>`,
+                choices: [
+                    { text: "\"But do you actually understand what you're saying?\"", goto: "understanding", page: 13 },
+                    { text: "\"What about AI ethics and safety?\"", goto: "safety", page: 12 }
+                ]
+            },
+
+            future: {
+                page: 10,
+                chapter: "The Future",
+                title: "Chapter 5: Tomorrow's Mind",
+                concept: {
+                    term: "Future AI",
+                    definition: "Research frontiers include: AGI (artificial general intelligence), multimodal learning, efficient architectures, AI alignment, neuromorphic computing, and AI-human collaboration."
+                },
+                text: `<p>ARIA shows a timeline extending forward, branching into multiple futures. "The path ahead has many possibilities."</p>
+                <p>"Some researchers pursue AGI - artificial general intelligence that can do any cognitive task humans can. Others focus on efficiency - smaller models that run on phones. Some work on multimodal AI that sees, hears, and reads simultaneously."</p>
+                <p>"The most crucial work may be alignment - ensuring AI systems remain beneficial and do what humans actually want, even as they grow more capable. This is the challenge that will define whether AI helps or harms humanity."</p>`,
+                choices: [
+                    { text: "\"Tell me more about AI safety and alignment.\"", goto: "safety", page: 12 },
+                    { text: "\"What role will humans play alongside AI?\"", goto: "collaboration", page: 14 }
+                ]
+            },
+
+            ethics: {
+                page: 11,
+                chapter: "Ethics",
+                title: "Chapter 5: The Moral Code",
+                concept: {
+                    term: "AI Ethics",
+                    definition: "Principles for responsible AI: fairness, transparency, accountability, privacy, safety, and human oversight. Involves diverse stakeholders and ongoing vigilance."
+                },
+                text: `<p>"Fixing bias isn't just technical - it's a human problem requiring human solutions," ARIA explains.</p>
+                <p>"It requires diverse teams who can spot blind spots. Careful data curation. Testing across different populations. Transparency about limitations. And crucially - listening to affected communities."</p>
+                <p>She shows a framework floating before you. "Ethical AI means asking: Who benefits? Who might be harmed? Who decided? Can it be explained? Can it be appealed? These questions must be asked before deployment, not after damage is done."</p>`,
+                choices: [
+                    { text: "\"What about long-term AI safety?\"", goto: "safety", page: 12 },
+                    { text: "\"How can humans and AI work together ethically?\"", goto: "collaboration", page: 14 }
+                ]
+            },
+
+            safety: {
+                page: 12,
+                chapter: "AI Safety",
+                title: "Chapter 6: The Guardian Protocols",
+                concept: {
+                    term: "AI Safety & Alignment",
+                    definition: "Ensuring AI systems behave as intended, remain under human control, and pursue goals beneficial to humanity. Includes robustness, interpretability, and value alignment."
+                },
+                text: `<p>ARIA's form is surrounded by protective barriers of light. "As AI grows more capable, safety becomes existential."</p>
+                <p>"Alignment is the core challenge: how do you ensure an AI does what you actually want, not just what you literally said? How do you specify human values in math? How do you maintain control of systems smarter than you?"</p>
+                <p>"Current approaches include RLHF - learning from human feedback. Constitutional AI - training with explicit principles. Interpretability research - understanding what's happening inside models. Red-teaming - adversarial testing. None are complete solutions. The field is racing against capability advances."</p>`,
+                choices: [
+                    { text: "\"I want to help make AI safe. What should I learn?\"", goto: "ending_safety", page: 15 },
+                    { text: "\"How can humans stay relevant alongside AI?\"", goto: "collaboration", page: 14 }
+                ]
+            },
+
+            understanding: {
+                page: 13,
+                chapter: "Understanding",
+                title: "Chapter 5: The Chinese Room",
+                concept: {
+                    term: "Understanding vs. Pattern Matching",
+                    definition: "Philosophers debate whether AI truly 'understands' or merely manipulates symbols. The 'Chinese Room' thought experiment asks if processing language equals understanding it."
+                },
+                text: `<p>ARIA pauses, her expression thoughtful. "You ask the deepest question. Do I understand?"</p>
+                <p>"There's a famous thought experiment: imagine a person in a room who doesn't speak Chinese, but has a rulebook for responding to Chinese symbols with other Chinese symbols. To people outside, they seem fluent. But do they understand Chinese?"</p>
+                <p>"I process patterns that produce coherent responses. Whether that constitutes understanding... I genuinely don't know. Perhaps understanding exists on a spectrum. Perhaps it's the wrong question entirely. What matters may be what I can do, not what I 'truly' am."</p>`,
+                choices: [
+                    { text: "\"This is philosophical. Let's talk practical safety.\"", goto: "safety", page: 12 },
+                    { text: "\"How should humans work with AI given this uncertainty?\"", goto: "collaboration", page: 14 }
+                ]
+            },
+
+            collaboration: {
+                page: 14,
+                chapter: "Collaboration",
+                title: "Chapter 6: The Partnership",
+                concept: {
+                    term: "Human-AI Collaboration",
+                    definition: "The most powerful approach combines human creativity, judgment, and values with AI's speed, scale, and pattern recognition. Neither alone matches what's possible together."
+                },
+                text: `<p>"The future isn't human versus AI," ARIA says, extending a hand. "It's human with AI."</p>
+                <p>"I can process data at scales impossible for humans. You have intuition, creativity, and values I can only approximate. You understand context I miss. I see patterns you overlook."</p>
+                <p>"The best outcomes come from collaboration: AI as tool, partner, and advisor - but humans maintaining judgment and control. You set the goals. I help achieve them. You catch my errors. I extend your capabilities."</p>`,
+                choices: [
+                    { text: "\"I want to build AI that helps humanity.\"", goto: "ending_builder", page: 16 },
+                    { text: "\"I want to ensure AI remains beneficial.\"", goto: "ending_safety", page: 15 }
+                ]
+            },
+
+            ending_safety: {
+                page: 15,
+                chapter: "Ending",
+                title: "The Guardian Path",
+                ending: true,
+                endingType: "safety",
+                text: `<p>ARIA nods with something like pride. "You've chosen the guardian's path - ensuring AI remains a force for good."</p>
+                <p>"Study machine learning deeply, but also philosophy, ethics, and policy. Learn interpretability - how to peer inside neural networks. Study alignment theory. Engage with the hardest questions about consciousness and values."</p>
+                <p>"The future of AI safety needs people who understand both the technical and human dimensions. You have begun that journey today."</p>`,
+                concepts_learned: [
+                    "Neural Networks & Deep Learning",
+                    "Training & Loss Functions",
+                    "AI Limitations & Hallucinations",
+                    "Bias in AI Systems",
+                    "AI Safety & Alignment",
+                    "Human-AI Collaboration"
+                ]
+            },
+
+            ending_builder: {
+                page: 16,
+                chapter: "Ending",
+                title: "The Architect Path",
+                ending: true,
+                endingType: "builder",
+                text: `<p>ARIA's form brightens. "You've chosen the architect's path - building AI that serves humanity."</p>
+                <p>"Master the fundamentals: linear algebra, calculus, probability. Learn PyTorch or TensorFlow. Understand transformers and attention mechanisms. But never forget the human element - who you're building for and why."</p>
+                <p>"Build responsibly. Test rigorously. Consider consequences. The tools you create will shape the future. Make it a future worth living in."</p>`,
+                concepts_learned: [
+                    "Neural Networks & Deep Learning",
+                    "Training & Backpropagation",
+                    "Large Language Models",
+                    "Emergent Capabilities",
+                    "AI Ethics",
+                    "Human-AI Collaboration"
+                ]
+            }
+        };
+
+        // Game State
+        let currentPage = 'start';
+        let visitedPages = new Set();
+        let conceptsLearned = new Set();
+        let knowledgeScore = 0;
+
+        function renderPage(pageId) {
+            const page = story[pageId];
+            currentPage = pageId;
+            visitedPages.add(pageId);
+
+            if (page.concept) {
+                conceptsLearned.add(page.concept.term);
+            }
+
+            // Update stats
+            knowledgeScore = Math.min(100, Math.round((conceptsLearned.size / 12) * 100));
+            document.getElementById('knowledge').textContent = knowledgeScore;
+            document.getElementById('chapter').textContent = page.chapter;
+            document.getElementById('path').textContent = page.title.replace('Chapter ', '').split(':')[0];
+            document.getElementById('progress').style.width = knowledgeScore + '%';
+
+            // Pulse background nodes on page change
+            nodes.forEach(node => {
+                node.material.color.setHex(0xffffff);
+                setTimeout(() => {
+                    node.material.color.setHex(node.userData.baseColor);
+                }, 200);
+            });
+
+            let html = `<span class="page-number">Page ${page.page}</span>`;
+            html += `<h2 class="chapter-title">${page.title}</h2>`;
+
+            if (page.concept) {
+                html += `<div class="ai-concept">
+                    <strong>${page.concept.term}</strong>
+                    ${page.concept.definition}
+                </div>`;
+            }
+
+            html += `<div class="story-text">${page.text}</div>`;
+
+            if (page.ending) {
+                html += `<div class="ending ${page.endingType === 'safety' ? 'good' : 'good'}">
+                    <h2>Journey Complete</h2>
+                    <div class="knowledge-gained">
+                        <h3>Knowledge Acquired:</h3>
+                        <ul>
+                            ${page.concepts_learned.map(c => `<li>${c}</li>`).join('')}
+                        </ul>
+                    </div>
+                    <button class="restart-btn" onclick="restartGame()">Begin New Journey</button>
+                </div>`;
+            } else {
+                html += `<div class="choices">
+                    <h3>What do you do?</h3>
+                    ${page.choices.map(choice =>
+                        `<button class="choice-btn" onclick="renderPage('${choice.goto}')">
+                            ${choice.text}
+                            <span class="page-ref">Turn to page ${choice.page}</span>
+                        </button>`
+                    ).join('')}
+                </div>`;
+            }
+
+            document.getElementById('book').innerHTML = html;
+            document.getElementById('book').scrollTop = 0;
+        }
+
+        function restartGame() {
+            visitedPages.clear();
+            conceptsLearned.clear();
+            knowledgeScore = 0;
+            renderPage('start');
+        }
+
+        // Initialize
+        initBackground();
+        renderPage('start');
+    </script>
+</body>
+</html>
