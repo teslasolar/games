@@ -1,0 +1,5 @@
+/* Main styles - imports component styles */
+@import url('style-base.css');
+@import url('style-terminal.css');
+@import url('style-content.css');
+@import url('style-endings.css');

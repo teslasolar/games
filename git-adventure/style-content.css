@@ -1,0 +1,111 @@
+/* Content elements - text, code, tips */
+.page-indicator {
+    color: #8b949e;
+    font-size: 12px;
+    margin-bottom: 10px;
+}
+
+.chapter-title {
+    color: #58a6ff;
+    font-size: 22px;
+    margin-bottom: 15px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.chapter-title .icon { font-size: 28px; }
+
+.concept-box {
+    background: rgba(56, 139, 253, 0.1);
+    border: 1px solid #388bfd;
+    border-radius: 6px;
+    padding: 15px;
+    margin: 20px 0;
+}
+
+.concept-box .label {
+    color: #58a6ff;
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-bottom: 8px;
+}
+
+.concept-box .term {
+    color: #f0f6fc;
+    font-size: 16px;
+    font-weight: bold;
+    margin-bottom: 8px;
+}
+
+.concept-box .definition {
+    color: #8b949e;
+    font-size: 13px;
+    line-height: 1.5;
+}
+
+.story-text {
+    line-height: 1.8;
+    font-size: 15px;
+    margin: 20px 0;
+}
+
+.story-text p { margin-bottom: 15px; }
+
+/* Code Blocks */
+.code-block {
+    background: #161b22;
+    border: 1px solid #30363d;
+    border-radius: 6px;
+    padding: 15px;
+    margin: 15px 0;
+    font-family: 'Courier New', monospace;
+    font-size: 13px;
+    overflow-x: auto;
+}
+
+.code-block .comment { color: #8b949e; }
+.code-block .keyword { color: #ff7b72; }
+.code-block .string { color: #a5d6ff; }
+.code-block .tag { color: #7ee787; }
+.code-block .attr { color: #79c0ff; }
+.code-block .command { color: #d2a8ff; }
+
+/* Tips and Warnings */
+.pro-tip {
+    background: rgba(63, 185, 80, 0.1);
+    border-left: 3px solid #3fb950;
+    padding: 12px 15px;
+    margin: 15px 0;
+    font-size: 13px;
+}
+
+.pro-tip strong { color: #3fb950; }
+
+.warning {
+    background: rgba(210, 153, 34, 0.1);
+    border-left: 3px solid #d29922;
+    padding: 12px 15px;
+    margin: 15px 0;
+    font-size: 13px;
+}
+
+.warning strong { color: #d29922; }
+
+/* File Tree */
+.file-tree {
+    background: #0d1117;
+    border: 1px solid #30363d;
+    border-radius: 6px;
+    padding: 15px;
+    margin: 15px 0;
+    font-size: 13px;
+}
+
+.file-tree .folder { color: #58a6ff; }
+.file-tree .file { color: #c9d1d9; }
+.file-tree .file.html { color: #f97583; }
+.file-tree .file.js { color: #f0e68c; }
+.file-tree .file.css { color: #79c0ff; }
+.file-tree .file.json { color: #7ee787; }
