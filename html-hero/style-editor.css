@@ -1,0 +1,136 @@
+/* Editor and preview panels */
+.workspace {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+    margin-bottom: 20px;
+}
+
+.editor-panel, .preview-panel {
+    background: #1e1e1e;
+    border-radius: 10px;
+    overflow: hidden;
+    border: 1px solid #333;
+}
+
+.panel-header {
+    background: #2d2d2d;
+    padding: 10px 15px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 13px;
+    color: #888;
+}
+
+.run-btn {
+    background: #4ade80;
+    color: #000;
+    border: none;
+    padding: 5px 15px;
+    border-radius: 5px;
+    font-weight: bold;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.run-btn:hover {
+    background: #22c55e;
+    transform: scale(1.05);
+}
+
+.status {
+    font-size: 12px;
+    padding: 3px 10px;
+    border-radius: 10px;
+    background: #333;
+}
+
+.status.success { background: #4ade80; color: #000; }
+.status.error { background: #f87171; color: #fff; }
+
+.editor-wrap {
+    display: flex;
+    height: 350px;
+}
+
+.line-numbers {
+    background: #1a1a1a;
+    padding: 15px 10px;
+    text-align: right;
+    color: #555;
+    font-family: 'Courier New', monospace;
+    font-size: 14px;
+    line-height: 1.5;
+    user-select: none;
+    min-width: 40px;
+}
+
+#editor {
+    flex: 1;
+    background: #1e1e1e;
+    color: #d4d4d4;
+    border: none;
+    padding: 15px;
+    font-family: 'Courier New', monospace;
+    font-size: 14px;
+    line-height: 1.5;
+    resize: none;
+    outline: none;
+    tab-size: 2;
+}
+
+#editor::selection {
+    background: rgba(255, 107, 107, 0.3);
+}
+
+#preview {
+    width: 100%;
+    height: 350px;
+    background: #fff;
+    border: none;
+}
+
+/* Controls */
+.controls {
+    display: flex;
+    gap: 15px;
+    justify-content: center;
+}
+
+.btn {
+    padding: 12px 25px;
+    border: none;
+    border-radius: 8px;
+    font-size: 14px;
+    font-weight: bold;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.hint-btn {
+    background: #374151;
+    color: #feca57;
+}
+
+.hint-btn:hover { background: #4b5563; }
+
+.check-btn {
+    background: linear-gradient(90deg, #ff6b6b, #feca57);
+    color: #000;
+}
+
+.check-btn:hover {
+    transform: scale(1.05);
+    box-shadow: 0 0 20px rgba(255, 107, 107, 0.5);
+}
+
+.skip-btn {
+    background: #374151;
+    color: #888;
+}
+
+.skip-btn:hover {
+    background: #4b5563;
+    color: #fff;
+}

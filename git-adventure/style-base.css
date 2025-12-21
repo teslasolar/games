@@ -1,0 +1,69 @@
+/* Base styles and stats bar */
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+body {
+    background: #0d1117;
+    color: #c9d1d9;
+    font-family: 'Courier New', monospace;
+    overflow-x: hidden;
+    overflow-y: auto;
+}
+
+#bg-canvas {
+    position: fixed;
+    top: 0;
+    left: 0;
+    z-index: 0;
+    opacity: 0.4;
+}
+
+/* Stats Bar */
+.stats-bar {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    background: #161b22;
+    border-bottom: 1px solid #30363d;
+    padding: 8px 20px;
+    display: flex;
+    justify-content: space-between;
+    font-size: 12px;
+    z-index: 100;
+}
+
+.stat {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+}
+
+.stat-label { color: #8b949e; }
+.stat-value { color: #58a6ff; }
+.stat-value.good { color: #3fb950; }
+
+.xp-bar {
+    width: 100px;
+    height: 6px;
+    background: #30363d;
+    border-radius: 3px;
+    overflow: hidden;
+}
+
+.xp-fill {
+    height: 100%;
+    background: linear-gradient(90deg, #3fb950, #58a6ff);
+    transition: width 0.5s ease;
+}
+
+/* Game Container */
+.game-container {
+    position: relative;
+    z-index: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-height: 100vh;
+    padding: 20px;
+}

@@ -1,0 +1,80 @@
+/* Endings and badges */
+.ending { text-align: center; }
+
+.ending h2 {
+    color: #3fb950;
+    font-size: 26px;
+    margin-bottom: 20px;
+}
+
+.ending.master h2 { color: #a371f7; }
+.ending.hacker h2 { color: #3fb950; }
+.ending.builder h2 { color: #58a6ff; }
+
+.badge {
+    display: inline-block;
+    background: linear-gradient(135deg, #238636 0%, #2ea043 100%);
+    padding: 20px 40px;
+    border-radius: 10px;
+    margin: 20px 0;
+}
+
+.badge.master { background: linear-gradient(135deg, #8957e5 0%, #a371f7 100%); }
+.badge.hacker { background: linear-gradient(135deg, #238636 0%, #3fb950 100%); }
+.badge.builder { background: linear-gradient(135deg, #1f6feb 0%, #58a6ff 100%); }
+
+.badge-title {
+    font-size: 24px;
+    color: white;
+    margin-bottom: 5px;
+}
+
+.badge-subtitle {
+    font-size: 12px;
+    color: rgba(255,255,255,0.8);
+    text-transform: uppercase;
+    letter-spacing: 2px;
+}
+
+.skills-learned {
+    background: #161b22;
+    border: 1px solid #30363d;
+    border-radius: 10px;
+    padding: 20px;
+    margin: 20px 0;
+    text-align: left;
+    max-width: 400px;
+    display: inline-block;
+}
+
+.skills-learned h3 {
+    color: #58a6ff;
+    margin-bottom: 15px;
+    font-size: 14px;
+}
+
+.skills-learned li {
+    list-style: none;
+    padding: 5px 0;
+    color: #8b949e;
+}
+
+.skills-learned li::before {
+    content: '✓ ';
+    color: #3fb950;
+}
+
+.restart-btn {
+    background: #238636;
+    border: none;
+    color: white;
+    padding: 12px 30px;
+    font-family: 'Courier New', monospace;
+    font-size: 14px;
+    cursor: pointer;
+    border-radius: 6px;
+    margin-top: 20px;
+    transition: all 0.2s ease;
+}
+
+.restart-btn:hover { background: #2ea043; }
