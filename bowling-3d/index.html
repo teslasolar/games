@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Bowling 3D - Strike!</title>
+    <link rel="stylesheet" href="style.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+</head>
+<body>
+    <div class="hud">
+        <div class="scoreboard" id="scoreboard"></div>
+        <div class="frame-info">
+            <span>Frame: <strong id="frame">1</strong>/10</span>
+            <span>Ball: <strong id="ball-num">1</strong></span>
+        </div>
+    </div>
+
+    <div class="controls-hint" id="hint">
+        🎳 Drag to aim • Release to bowl!
+    </div>
+
+    <div class="power-meter" id="power-meter">
+        <div class="power-fill" id="power-fill"></div>
+        <div class="power-label">POWER</div>
+    </div>
+
+    <div class="result-popup" id="popup">
+        <div class="result-text" id="result-text">STRIKE!</div>
+    </div>
+
+    <div class="game-over" id="game-over">
+        <h1>GAME OVER</h1>
+        <div class="final-score">Final Score: <span id="final-score">0</span></div>
+        <button onclick="Game.restart()">Play Again</button>
+    </div>
+
+    <canvas id="canvas"></canvas>
+
+    <script src="scene.js"></script>
+    <script src="pins.js"></script>
+    <script src="ball.js"></script>
+    <script src="game.js"></script>
+</body>
+</html>
